@@ -2,19 +2,12 @@ syntax = "proto3";
 
 package overlord;
 
-// Needed for the Envoy prxy
-import "google/api/annotations.proto";
-
 option go_package = "github.com/paradoxengine/minions/proto/overlord;overlord";
 
 // Basic service definition for the Overlord, which can start and
 // stop scans.
 service Overlord {
   rpc Scan (ScanRequest) returns (ScanResponse) {
-    option (google.api.http) = {
-      post: "/v1/scan"
-      body: "*"
-    };
   }
 }
 

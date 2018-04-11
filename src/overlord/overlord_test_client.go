@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
+	pb "github.com/paradoxengine/minions/proto/overlord"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	pb "github.com/paradoxengine/minions/proto/overlord"
 )
 
 var (

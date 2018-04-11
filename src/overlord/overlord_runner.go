@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+
 	"github.com/paradoxengine/minions/src/overlord"
 
 	"google.golang.org/grpc"
@@ -13,7 +14,7 @@ import (
 )
 
 var (
-	port       = flag.Int("port", 10000, "Overlord server port")
+	port = flag.Int("port", 10000, "Overlord server port")
 )
 
 func newServer() *overlord.Overlord {
@@ -31,5 +32,5 @@ func main() {
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterOverlordServer(grpcServer, newServer())
-	grpcServer.Serve(lis)	
+	grpcServer.Serve(lis)
 }

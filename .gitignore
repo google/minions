@@ -1,3 +1,4 @@
+.history
 src/bazel-bin
 src/bazel-genfiles
 src/bazel-out

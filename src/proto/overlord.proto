@@ -2,17 +2,108 @@ syntax = "proto3";
 
 package overlord;
 
-option go_package = "github.com/paradoxengine/minions/proto/overlord;overlord";
+import "proto/minions.proto";
+import "proto/findings.proto";
 
-// Basic service definition for the Overlord, which can start and
-// stop scans.
+option go_package = "github.com/google/minions/proto/overlord;overlord";
+
+
+// Overlord provides security scanning services at a file level.
 service Overlord {
-  rpc Scan (ScanRequest) returns (ScanResponse) {
-  }
+  // Creates a new Scan.
+  rpc CreateScan (CreateScanRequest) returns (Scan) {}
+
+  // Returns all the current interests of a Scan. Callers are expected to update
+  // their own internal copy of the list as they invoke ScanFiles, but they can
+  // always retrieve the current status here.
+  rpc ListInterests (ListInterestsRequest) returns (ListInterestsResponse) {}
+
+  // Perform security testing on a batch of files.
+  rpc ScanFiles (ScanFilesRequest) returns (ScanFilesResponse) {}
 }
 
-message ScanRequest {}
+//// Data messages.
 
-message ScanResponse {
-  string tempkillme = 1;
+// A security Scan on a set of files.
+message Scan {
+  // Arbitrary identifier on the data source side for the source of the data.
+  // The id is assigned by the Overlord.
+  string scan_id = 1;
+  // A series of interests the server expresses for this scan. Note that
+  // interests might change as the scan progresse as minions might become aware
+  // of more Interests.
+  repeated minions.Interest interests = 2;
+}
+
+// A File as represented by the Overlord. Note that a data source might provide
+// the Metadata only on its first pass.
+message File {
+  // Metadata of the files as they are scanned from the file system.
+  minions.FileMetadata metadata = 2;
+
+  // Chunks of the file. All files smaller than 2MB should be sent in a single
+  // data chunk. DataChunks are expected to be sent sorted to the Overlord.
+  repeated DataChunk data_chunks = 3;
+}
+
+message DataChunk {
+  // The byte offset for the data chunk, which is expected to be non-overlapping
+  // with other chunks. A file is considered complete once the reconstructed
+  // chunks have the size stated in the file metadata of the last File proto
+  // received. If at any point the reconstructed size grows bigger than the
+  // stated size, the file is ignored. Out-of-order data chunks or chunks where
+  // the offset does not match previously received chunks also cause the entire
+  // file to be discarded.
+  // Overlord applies an internal timeout on file reconstruction.
+  // TODO: clearly define the maximum supported number of concurrent
+  // chunks per Overlord, the timeouts etc.
+  int64 offset = 1;
+  // A single chunk should never contain more than 2 MB of data.
+  bytes data = 2;
+}
+
+//// Requests and responses.
+
+message CreateScanRequest {}
+
+message ListInterestsRequest {
+  // Scan to retrieve interests for.
+  string scan_id = 1;
+
+  // Maximum number of results that the client would like to have in response.
+  // The server may further constrain the maximum number of results returned
+  // in a single page. If the page_size is 0, the server will decide the number
+  // of results to be returned.
+  int32 page_size = 2;
+
+  // Opaque token provided by the server which the client can use to specify
+  // a specific page of results to be fetched.
+  string page_token = 3;
+}
+
+message ListInterestsResponse {
+  // Current interests of the Scan.
+  repeated minions.Interest interests = 1;
+  // Opaque token to be used by clients to retrieve the next page of results.
+  // If the value is "", it means no further results for the request.
+  string next_page_token = 2;
+}
+
+// A request containing files that should be scanned.
+message ScanFilesRequest {
+  // The ID of the scan these files belong to.
+  string scan_id = 1;
+  // Files we want to scan.
+  repeated File files = 2;
+}
+
+message ScanFilesResponse {
+  // As a result of the newly scanned files, the Overlord might ask for new
+  // things. These new interests should be matched against the entire available
+  // data source as they might be asking for more data on a file for which only
+  // the metadata have been sent, or something entirely new.
+  repeated minions.Interest new_interests = 1;
+
+  // The results of the scan on the files that have just been provided.
+  repeated findings.Finding results = 2;
 }

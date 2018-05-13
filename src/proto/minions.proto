@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "proto/findings.proto";
+
+package minions;
+
+option go_package = "github.com/google/minions/proto/minions;minions";
+
+// Minion is a service that performs security checks given Files that satisfy
+// its Interests.
+service Minion {
+  // Returns the initial Interests of a Minion - additional ones may be returned
+  // later by the AnalyzeFiles method.
+  rpc ListInitialInterests(ListInitialInterestsRequest) returns (ListInitialInterestsResponse) {}
+
+  // Performs security scan on a batch of Files. It may return Findings and
+  // it also may return additional Interests.
+  rpc AnalyzeFiles(AnalyzeFilesRequest) returns (AnalyzeFilesResponse) {}
+}
+
+// A representation of a file and its metadata used by Minion.
+message File {
+  // Metadata of a file.
+  FileMetadata metadata = 1;
+  // A complete file.
+  bytes data = 2;
+}
+
+// Metadata of a single file.
+message FileMetadata {
+  // Full path to the file, including the file name.
+  string path = 1;
+  // Posix permissions on the file.
+  int32 permissions = 2;
+  // Posix file owner.
+  int32 owner_uid = 3;
+  // Posix file group owner.
+  int32 owner_gid = 4;
+  // Size of the file in bytes
+  int64 size = 5;
+  // Timestamp with last modification.
+  google.protobuf.Timestamp last_modification = 6;
+  // True if the file metadata refers to a directory.
+  bool is_directory = 7;
+  // True if the file is actually a symlink.
+  bool is_symlink = 8;
+  // True if the file is actually a hardlink.
+  bool is_hardlink = 9;
+  // If the file is a link, the target of the link. Note that links can point
+  // to other links.
+  string link_target = 11;
+
+  // One or more hashes for the file. Only one hash for each algorithm is
+  // expected and all hashes should match. In case of any mismatch,
+  // use the first hash. In case of repeated hashes with the same algorithm,
+  // only the first one is considered.
+  repeated FileHash hash = 10;
+}
+
+// An hash and the algorithm that was used to compute it.
+message FileHash {
+  // Defines the type of hashing algorithm used to compute an hash.
+  enum HashType {
+    // The hash algorithm is unknown.
+    HASH_UNKNOWN = 0;
+    // Hashing used SHA-256.
+    SHA_256 = 1;
+    // Hashing used SHA-1.
+    SHA_1 = 2;
+  }
+  // The hashing algorithm used to generate this hash.
+  HashType hash_type = 2;
+  // Value of the hash.
+  bytes hash = 3;
+}
+
+// An Interest, or what the Minion would like to know.
+message Interest {
+  enum DataType {
+    TYPE_UNKNOWN = 0;
+    // This interest is only about the file metadata.
+    METADATA = 1;
+    // This interest is both about the metadata and the actual bytes.
+    METADATA_AND_DATA = 2;
+  }
+  // The type of data being requested.
+  DataType data_type = 1;
+
+  // A re2 expression used to match file paths on the filesystem.
+  string path_regexp = 2;
+
+  // A re2 expression used to match file contents.
+  // IMPORTANT: No data source currently supports this interest mode.
+  string content_regexp = 3;
+}
+
+//// Requests and responses.
+
+message ListInitialInterestsRequest {}
+
+message ListInitialInterestsResponse {
+  // Initial interests expressed by the minion.
+  repeated Interest interests = 1;
+}
+
+message AnalyzeFilesRequest {
+  // The ID of the scan to which this AnalyzeFilesRequest belong. Minion might
+  // use this value to persist state between calls.
+  string scan_id = 1;
+  // Files that we want to scan.
+  repeated File files = 2;
+}
+message AnalyzeFilesResponse {
+  // Minion might ask for new files as a result of a AnalyzeFiles call. Files
+  // matching these new interests should be sent to the Minion in subsequent
+  // calls to AnalyzeFiles.
+  repeated Interest new_interests = 1;
+  // Security issues that were found in files during this AnalyzeFiles call.
+  repeated findings.Finding findings = 2;
+}

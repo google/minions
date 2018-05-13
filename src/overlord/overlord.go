@@ -21,6 +21,14 @@ import (
 type Overlord struct {
 }
 
-func (s *Overlord) Scan(ctx context.Context, req *pb.ScanRequest) (*pb.ScanResponse, error) {
-	return &pb.ScanResponse{"foo"}, nil
+func (s *Overlord) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb.Scan, error) {
+	return &pb.Scan{"NEW_SCAN_ID", nil}, nil
+}
+
+func (s *Overlord) ListInterests(ctx context.Context, req *pb.ListInterestsRequest) (*pb.ListInterestsResponse, error) {
+	return &pb.ListInterestsResponse{nil, "token"}, nil
+}
+
+func (s *Overlord) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.ScanFilesResponse, error) {
+	return &pb.ScanFilesResponse{nil, nil}, nil
 }

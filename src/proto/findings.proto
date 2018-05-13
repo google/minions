@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package findings;
+
+option go_package = "github.com/google/minions/proto/findings;findings";
+
+// Report of a security issue.
+message Finding {
+  // This enum is used to describe the expected accuracy of a specific report,
+  // expressed in terms of how likely it is for it to be a false positive.
+  enum Accuracy {
+    ACCURACY_UNKNOWN = 0;
+    // Most of the time a false positive.
+    ACCURACY_POOR = 2;
+    // Could be a false positive.
+    ACCURACY_AVERAGE = 4;
+    // Rarely a false positive.
+    ACCURACY_GREAT = 6;
+    // No questions about it.
+    ACCURACY_FIRM = 8;
+  }
+
+  enum Severity {
+    SEVERITY_UNKNOWN = 0;
+    SEVERITY_CRITICAL = 1;
+    SEVERITY_HIGH = 2;
+    SEVERITY_MEDIUM = 3;
+    SEVERITY_LOW = 4;
+    SEVERITY_MINIMAL = 5;
+  }
+
+  Advisory advisory = 1;
+  repeated Resource vulnerable_resources = 2;
+  Source source = 3;
+
+  Accuracy accuracy = 4;
+  Severity severity = 5;
+}
+
+// Identifies a specific type of vulnerability, for example 'vulnerable deb
+// package installed'.
+message Advisory {
+  // A string identifier for a vulnerability that uniquely identifies the
+  // specific issue.
+  string reference = 1;
+  // Human readable representation of the vulnerability.
+  string description = 2;
+  // Human readable representation of ways to solve a problem.
+  string recommendation = 3;
+}
+
+// Aggregates information about the origin of a Finding - like which scan
+// generated a Finding and when.
+message Source {
+  // The unique ID of the scan that originated this Finding.
+  string scan_id = 1;
+  // Name of the minion which found the issue.
+  string minion = 2;
+  // Timestamp with the time of the detection.
+  google.protobuf.Timestamp detection_time = 3;
+}
+
+// Used to represent the context of a vulnerability, that is a path and some
+// additional information about the file/directory that introduced said
+// vulnerability.
+message Resource {
+  // Absolute path of the problematic resource.
+  string path = 1;
+  // Human readable additional information (line numbers, user names, etc.).
+  string additional_info = 2;
+}

@@ -31,7 +31,7 @@ func startScan(client pb.OverlordClient) {
 	log.Printf("Connecting to server")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	response, err := client.Scan(ctx, &pb.ScanRequest{})
+	response, err := client.CreateScan(ctx, &pb.CreateScanRequest{})
 	if err != nil {
 		log.Fatalf("%v.Scan(_) = _, %v", client, err)
 	}

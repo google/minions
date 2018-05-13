@@ -6,7 +6,7 @@ package(default_visibility = ["//visibility:private"])
 go_library(
     name = "go_default_library",
     srcs = ["overlord.go"],
-    importpath = "github.com/paradoxengine/minions/src/overlord",
+    importpath = "github.com/google/minions/src/overlord",
     deps = [
         "//proto:go_default_library",
         "@org_golang_x_net//context:go_default_library",
@@ -16,7 +16,7 @@ go_library(
 go_library(
     name = "overlord",
     srcs = ["overlord.go"],
-    importpath = "github.com/paradoxengine/minions/src/overlord",
+    importpath = "github.com/google/minions/src/overlord",
     deps = [
         "//proto:go_default_library",
         "@org_golang_x_net//context:go_default_library",

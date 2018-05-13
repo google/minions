@@ -6,11 +6,11 @@ import (
 	"log"
 	"net"
 
-	"github.com/paradoxengine/minions/src/overlord"
+	"github.com/google/minions/src/overlord"
 
 	"google.golang.org/grpc"
 
-	pb "github.com/paradoxengine/minions/proto/overlord"
+	pb "github.com/google/minions/proto/overlord"
 )
 
 var (

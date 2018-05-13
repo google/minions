@@ -1,7 +1,7 @@
 package overlord
 
 import (
-	pb "github.com/paradoxengine/minions/proto/overlord"
+	pb "github.com/google/minions/proto/overlord"
 	"golang.org/x/net/context"
 )
 

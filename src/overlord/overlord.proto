@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package overlord;
 
-import "proto/minions.proto";
-import "proto/findings.proto";
+import "minions/minions.proto";
+import "minions/findings.proto";
 
-option go_package = "github.com/google/minions/proto/overlord;overlord";
+option go_package = "github.com/google/minions/proto/overlord";
 
 
 // Overlord provides security scanning services at a file level.

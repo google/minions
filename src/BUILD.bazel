@@ -8,3 +8,13 @@ gazelle(
     prefix = "github.com/google/minions/src",
     command = "fix"
 )
+
+load("@io_bazel_rules_go//go:def.bzl", "go_path")
+go_path(
+    name = "gopath",
+    mode = "link",
+    deps = [
+        "//overlord:go_default_library",
+        "//minions:go_default_library",
+    ],
+)

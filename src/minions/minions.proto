@@ -1,11 +1,11 @@
 syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
-import "proto/findings.proto";
+import "minions/findings.proto";
 
 package minions;
 
-option go_package = "github.com/google/minions/proto/minions;minions";
+option go_package = "github.com/google/minions/proto/minions";
 
 // Minion is a service that performs security checks given Files that satisfy
 // its Interests.

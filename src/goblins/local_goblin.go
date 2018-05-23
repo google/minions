@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	serverAddr = flag.String("server_addr", "127.0.0.1:10000", "The server address in the format of host:port")
+	overlordAddr = flag.String("overlord_addr", "127.0.0.1:10000", "Overlord address in the format of host:port")
 )
 
 func startScan(client pb.OverlordClient) {
@@ -36,11 +36,16 @@ func startScan(client pb.OverlordClient) {
 		log.Fatalf("%v.Scan(_) = _, %v", client, err)
 	}
 	log.Printf("Received response: %s", response)
+
+	log.Printf("Will now send the following files.")
+	for _, i := range response.GetInterests() {
+		log.Printf(i.GetPathRegexp())
+	}
 }
 
 func main() {
 	flag.Parse()
-	conn, err := grpc.Dial(*serverAddr, grpc.WithInsecure())
+	conn, err := grpc.Dial(*overlordAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("fail to dial: %v", err)
 	}

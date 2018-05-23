@@ -24,6 +24,6 @@ go_proto_library(
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
     importpath = "github.com/google/minions/proto/overlord",
     proto = ":overlord_proto",
-    deps = ["//minions:minions_go_proto"],
-    visibility = ["//visibility:public"]
+    visibility = ["//visibility:public"],
+    deps = ["//minions:go_default_library"],
 )

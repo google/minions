@@ -5,8 +5,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_prefix")
 go_prefix("github.com/google/minions")
 gazelle(
     name = "gazelle",
-    prefix = "github.com/google/minions/src",
-    command = "fix"
+    prefix = "github.com/google/minions",
+    mode = "print"
 )
 
 load("@io_bazel_rules_go//go:def.bzl", "go_path")
@@ -14,7 +14,9 @@ go_path(
     name = "gopath",
     mode = "link",
     deps = [
-        "//overlord:go_default_library",
+        "//goblins:go_default_library",
         "//minions:go_default_library",
+        "//minions/vulners:go_default_library",
+        "//overlord:go_default_library",
     ],
 )

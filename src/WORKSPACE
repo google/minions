@@ -17,6 +17,12 @@ git_repository(
     tag = "v0.4.0",
 )
 git_repository(
+    name = "resty",
+    remote = "https://github.com/go-resty/resty",
+    tag = "v1.5",
+)
+
+git_repository(
     name = "org_pubref_rules_protobuf",
     remote = "https://github.com/pubref/rules_protobuf.git",
     tag = "v0.8.1",

@@ -30,7 +30,6 @@ import (
 type Minion interface {
 	// ListInitialInterests returns the initial Interests of a Minion.
 	ListInitialInterests(ctx context.Context, req *pb.ListInitialInterestsRequest) (*pb.ListInitialInterestsResponse, error)
-	//AnalyzeFiles returns security issues found in files from
-	//AnalyzeFilesRequest.
+	// AnalyzeFiles returns security issues found in files from AnalyzeFilesRequest.
 	AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (*pb.AnalyzeFilesResponse, error)
 }

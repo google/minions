@@ -19,11 +19,9 @@ import (
 	"log"
 	"net"
 
-	"github.com/google/minions/src/overlord"
-
-	"google.golang.org/grpc"
-
+	"github.com/google/minions/overlord"
 	pb "github.com/google/minions/proto/overlord"
+	"google.golang.org/grpc"
 )
 
 var (

@@ -18,17 +18,23 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Overlord is the orchestrator of Minions' infrastructure.
 type Overlord struct {
 }
 
+// CreateScan set up a security scan which can then be fed files via ScanFiles
 func (s *Overlord) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb.Scan, error) {
-	return &pb.Scan{"NEW_SCAN_ID", nil}, nil
+	return &pb.Scan{ScanId: "NEW_SCAN_ID", Interests: nil}, nil
 }
 
+// ListInterests returns the interests for a given scan, i.e. the files or metadata
+// that have to be fed the Overlord for security scanning.
 func (s *Overlord) ListInterests(ctx context.Context, req *pb.ListInterestsRequest) (*pb.ListInterestsResponse, error) {
-	return &pb.ListInterestsResponse{nil, "token"}, nil
+	return &pb.ListInterestsResponse{Interests: nil, NextPageToken: "token"}, nil
 }
 
+// ScanFiles runs security scan on a set of files, assuming they were actually
+// needed by the backend minions.
 func (s *Overlord) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.ScanFilesResponse, error) {
-	return &pb.ScanFilesResponse{nil, nil}, nil
+	return &pb.ScanFilesResponse{NewInterests: nil, Results: nil}, nil
 }

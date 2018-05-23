@@ -14,6 +14,8 @@
 package overlord
 
 import (
+	"github.com/google/uuid"
+
 	pb "github.com/google/minions/proto/overlord"
 	"golang.org/x/net/context"
 )
@@ -22,9 +24,18 @@ import (
 type Overlord struct {
 }
 
-// CreateScan set up a security scan which can then be fed files via ScanFiles
+// CreateScan set up a security scan which can then be fed files via ScanFiles.
+// It returns a UUID identifying the scan from now on and the list of initial
+// Interests.
 func (s *Overlord) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb.Scan, error) {
-	return &pb.Scan{ScanId: "NEW_SCAN_ID", Interests: nil}, nil
+	// Scans are tracked by UUID, so let's start by generating it.
+	scan := &pb.Scan{}
+	u, _ := uuid.NewRandom()
+	scan.ScanId = u.String()
+
+	// TODO(claudio): fetch interests from all registered minions and add them here.
+
+	return scan, nil
 }
 
 // ListInterests returns the interests for a given scan, i.e. the files or metadata

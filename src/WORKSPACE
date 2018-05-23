@@ -28,6 +28,24 @@ git_repository(
     tag = "v0.8.1",
 )
 
+new_git_repository(
+    name = "google_uuid",
+    build_file_content = """
+load("@io_bazel_rules_go//go:def.bzl", "go_prefix")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+go_prefix("github.com/google/uuid")
+go_library(
+    name = "go_default_library",
+    srcs = glob(["*.go"], exclude=["*_test.go"]),
+    deps = [
+    ],
+    visibility = ["//visibility:public"],
+)
+    """,
+    tag = "0.2",
+    remote = "https://github.com/google/uuid",
+)
+
 load(
     "@io_bazel_rules_go//go:def.bzl",
     "go_rules_dependencies",

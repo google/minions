@@ -1,11 +1,18 @@
 workspace(name = "minions")
 
-
 http_archive(
     name = "io_bazel_rules_go",
     url = "https://github.com/bazelbuild/rules_go/releases/download/0.10.1/rules_go-0.10.1.tar.gz",
     sha256 = "4b14d8dd31c6dbaf3ff871adcd03f28c3274e42abc855cb8fb4d01233c0154dc",
 )
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_rules_dependencies",
+    "go_register_toolchains",
+    "go_repository"
+)
+
 http_archive(
     name = "bazel_gazelle",
     url = "https://github.com/bazelbuild/bazel-gazelle/releases/download/0.9/bazel-gazelle-0.9.tar.gz",
@@ -28,6 +35,12 @@ git_repository(
     tag = "v0.8.1",
 )
 
+go_repository(
+    name = "com_github_stretchr_testify",
+    importpath = "github.com/stretchr/testify",
+    tag = "v1.2.1",
+)
+
 new_git_repository(
     name = "google_uuid",
     build_file_content = """
@@ -46,11 +59,6 @@ go_library(
     remote = "https://github.com/google/uuid",
 )
 
-load(
-    "@io_bazel_rules_go//go:def.bzl",
-    "go_rules_dependencies",
-    "go_register_toolchains"
-)
 # See this URL for a list of the things this imports:
 # https://github.com/bazelbuild/rules_go/blob/master/go/workspace.rst#go_rules_dependencies
 go_rules_dependencies()

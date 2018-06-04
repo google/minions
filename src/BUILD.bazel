@@ -11,12 +11,15 @@ gazelle(
 
 load("@io_bazel_rules_go//go:def.bzl", "go_path")
 go_path(
+    # testonly helps to generate deps for tests
+    testonly = 1,
     name = "gopath",
     mode = "link",
     deps = [
         "//goblins:go_default_library",
         "//minions:go_default_library",
         "//minions/vulners:go_default_library",
+        "//minions/vulners:go_tests_library",
         "//overlord:go_default_library",
     ],
 )

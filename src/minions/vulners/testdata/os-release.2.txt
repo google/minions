@@ -1,0 +1,9 @@
+NAME=CoreOS
+ID=coreos
+VERSION=835.9.0
+VERSION_ID=835.9.0
+BUILD_ID=
+PRETTY_NAME="CoreOS 835.9.0"
+ANSI_COLOR="1;32"
+HOME_URL="https://coreos.com/"
+BUG_REPORT_URL="https://github.com/coreos/bugs/issues"

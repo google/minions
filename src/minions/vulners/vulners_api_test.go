@@ -28,7 +28,7 @@ func TestGetVulnerabilitiesForCpe(t *testing.T) {
 	ts := createCpeServer(t)
 	defer ts.Close()
 
-	c := newClient()
+	c := newClient("irrelevant")
 	url, _ := url.Parse(ts.URL)
 	c.baseURL = url
 
@@ -45,7 +45,7 @@ func TestGetVulnerabilitiesForPackages(t *testing.T) {
 	ts := createPkgServer(t)
 	defer ts.Close()
 
-	c := newClient()
+	c := newClient("irrelevant")
 	url, _ := url.Parse(ts.URL)
 	c.baseURL = url
 
@@ -56,13 +56,13 @@ func TestGetVulnerabilitiesForPackages(t *testing.T) {
 }
 
 func TestInvalidCpeString(t *testing.T) {
-	c := newClient()
+	c := newClient("irrelevant")
 	_, err := c.getVulnerabilitiesForCpe("totallynotcpe", 1)
 	assert.Equal(t, ErrCpeFormat, err)
 }
 
 func TestNegativeMaxVulns(t *testing.T) {
-	c := newClient()
+	c := newClient("irrelevant")
 	_, err := c.getVulnerabilitiesForCpe("cpe:/a:cybozu:garoon:4.2.1", -1)
 	assert.Error(t, err)
 }

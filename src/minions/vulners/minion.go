@@ -40,9 +40,10 @@ type Minion struct {
 }
 
 // NewMinion creates a default vulners minion that connects to Vulners default
-// API endpoints.
-func NewMinion() *Minion {
-	return &Minion{newClient()}
+// API endpoints. It accepts an optional apiKey parameter which specifies which
+// key to use when querying the Vulners APIs.
+func NewMinion(apiKey string) *Minion {
+	return &Minion{newClient(apiKey)}
 }
 
 // ListInitialInterests returns a list of files which might contain

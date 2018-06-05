@@ -20,7 +20,9 @@ import (
 )
 
 func TestAnalyzeFiles_local(t *testing.T) {
-	m := NewMinion()
+	// TODO(claudio): this is clearly only meant for local testing for now ;-)
+	apiKey := ""
+	m := NewMinion(apiKey)
 	resp, _ := m.AnalyzeFiles(nil, nil)
 
 	for _, f := range resp.GetFindings() {
@@ -32,7 +34,7 @@ func TestAnalyzeFiles_local(t *testing.T) {
 }
 
 func TestListInitialInterests(t *testing.T) {
-	m := NewMinion()
+	m := NewMinion("irrelevant")
 	foundDpkg := false
 	interests, _ := m.ListInitialInterests(nil, nil)
 	for _, i := range interests.GetInterests() {

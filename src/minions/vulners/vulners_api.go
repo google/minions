@@ -31,13 +31,14 @@ var (
 // A Client for the vulners APIs for Golang.
 type Client struct {
 	baseURL *url.URL
+	apiKey  string
 }
 
-// NewClient creates a new Client with the default baseURL
-func newClient() *Client {
+// newClient creates a new Client with the default baseURL
+func newClient(apiKey string) *Client {
 	var url *url.URL
 	url, _ = url.Parse("https://vulners.com/api/v3")
-	return &Client{baseURL: url}
+	return &Client{baseURL: url, apiKey: apiKey}
 }
 
 // getVulnerabilitiesForCpe returns all known vulnerabilities from Vulners for the
@@ -50,6 +51,7 @@ func (c *Client) getVulnerabilitiesForCpe(cpe string, maxVulnerabilities int) (r
 		Version            string `json:"version"`
 		MaxVulnerabilities int    `json:"maxVulnerabilities"`
 		Type               string `json:"type"`
+		APIKey             string `json:"apiKey"`
 	}
 
 	// Note that the APIs default behavior is to error out (402 - "Too much results") if
@@ -68,7 +70,9 @@ func (c *Client) getVulnerabilitiesForCpe(cpe string, maxVulnerabilities int) (r
 		Software:           cpe,
 		Version:            version,
 		MaxVulnerabilities: maxVulnerabilities,
-		Type:               "cpe"}
+		Type:               "cpe",
+		APIKey:             c.apiKey,
+	}
 	json, err := json.Marshal(msg)
 
 	resp, _ := resty.R().
@@ -118,11 +122,13 @@ func (c *Client) getVulnerabilitiesForPackages(os string, osVersion string, pack
 		OS      string   `json:"os"`
 		Version string   `json:"version"`
 		Package []string `json:"package"`
+		APIKey  string   `json:"apiKey"`
 	}
 	msg := getVulnForPkg{
 		OS:      os,
 		Version: osVersion,
 		Package: packages,
+		APIKey:  c.apiKey,
 	}
 	json, err := json.Marshal(msg)
 

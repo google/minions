@@ -1,30 +1,67 @@
 workspace(name = "minions")
 
-http_archive(
+git_repository(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.10.1/rules_go-0.10.1.tar.gz",
-    sha256 = "4b14d8dd31c6dbaf3ff871adcd03f28c3274e42abc855cb8fb4d01233c0154dc",
+    remote = "https://github.com/bazelbuild/rules_go.git",
+    tag = "0.12.0",
 )
 
 load(
     "@io_bazel_rules_go//go:def.bzl",
-    "go_rules_dependencies",
     "go_register_toolchains",
-    "go_repository"
+    "go_repository",
+    "go_rules_dependencies",
 )
 
-http_archive(
-    name = "bazel_gazelle",
-    url = "https://github.com/bazelbuild/bazel-gazelle/releases/download/0.9/bazel-gazelle-0.9.tar.gz",
-    sha256 = "0103991d994db55b3b5d7b06336f8ae355739635e0c2379dea16b8213ea5a223",
+# note that the order matters here. These imports redefine
+# the proto library. Java time!
+git_repository(
+    name = "io_grpc_grpc_java",
+    remote = "https://github.com/grpc/grpc-java.git",
+    tag = "v1.12.0",
 )
+
+load(
+    "@io_grpc_grpc_java//:repositories.bzl",
+    "grpc_java_repositories",
+)
+
+grpc_java_repositories()
+
+maven_jar(
+	name = "com_sleepycat_je",
+    # This is the latest version available on Maven central.
+    # More modern versions are on Oracle's Maven servers, which
+    # require authentication and dancing under the full moon.
+	artifact = "com.sleepycat:je:5.0.73",
+)
+
+git_repository(
+    name = "bazel_gazelle",
+    remote = "https://github.com/bazelbuild/bazel-gazelle.git",
+    tag = "0.12.0"
+)
+
+# Buildifier
+http_archive(
+    name = "com_github_bazelbuild_buildtools",
+    strip_prefix = "buildtools-4fe6acf537e980ff6878a51e5894605be221224c",
+    url = "https://github.com/bazelbuild/buildtools/archive/4fe6acf537e980ff6878a51e5894605be221224c.zip",
+)
+
+load("@io_bazel_rules_go//go:def.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
+
+buildifier_dependencies()
+
 git_repository(
     name = "io_bazel_rules_docker",
     remote = "https://github.com/bazelbuild/rules_docker.git",
     tag = "v0.4.0",
 )
+
 git_repository(
-    name = "resty",
+    name = "in_gopkg_resty_v1",
     remote = "https://github.com/go-resty/resty",
     tag = "v1.5",
 )
@@ -42,7 +79,7 @@ go_repository(
 )
 
 new_git_repository(
-    name = "google_uuid",
+    name = "com_github_google_uuid",
     build_file_content = """
 load("@io_bazel_rules_go//go:def.bzl", "go_prefix")
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -55,19 +92,23 @@ go_library(
     visibility = ["//visibility:public"],
 )
     """,
-    tag = "0.2",
     remote = "https://github.com/google/uuid",
+    tag = "0.2",
 )
 
 # See this URL for a list of the things this imports:
 # https://github.com/bazelbuild/rules_go/blob/master/go/workspace.rst#go_rules_dependencies
 go_rules_dependencies()
+
 go_register_toolchains()
+
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+
 gazelle_dependencies()
 
 load(
     "@io_bazel_rules_docker//go:image.bzl",
-    _go_image_repos = "repositories",
+    docker_go_image_repos = "repositories",
 )
-_go_image_repos()
+
+docker_go_image_repos()

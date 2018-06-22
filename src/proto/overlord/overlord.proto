@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package overlord;
 
-import "minions/minions.proto";
-import "minions/findings.proto";
+import "proto/minions/minions.proto";
+import "proto/minions/findings.proto";
 
 option go_package = "github.com/google/minions/proto/overlord";
 

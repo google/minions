@@ -5,34 +5,32 @@ go_library(
     srcs = [
         "minion.go",
         "osreleaseparser.go",
-        "vulners_api.go"],
+        "vulners_api.go",
+    ],
     importpath = "github.com/google/minions/minions/vulners",
     visibility = ["//visibility:public"],
     deps = [
-        "//minions:go_default_library",
-        "//minions/vulners/dpkg:go_default_library",
+        "//go/minions/vulners/dpkg:go_default_library",
+        "//proto/minions:go_default_library",
         "@com_github_golang_protobuf//ptypes:go_default_library",
+        "@in_gopkg_resty_v1//:go_default_library",
         "@org_golang_x_net//context:go_default_library",
-        "@resty//:go_default_library"
     ],
 )
-
 
 # Awful ack to allow go path build to generate all dependencies.
 # The duplication should not be necessary, except it is, otherwise
 # the test won't see the tests to run (if used as deps)
-go_library (
+go_library(
     name = "go_tests_library",
     srcs = [
         "minion_test.go",
         "osreleaseparser_test.go",
         "vulners_api_test.go",
     ],
-    visibility = ["//visibility:public"],
     embed = [":go_default_library"],
-    deps = [
-        "@com_github_stretchr_testify//assert:go_default_library",
-    ],
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_stretchr_testify//assert:go_default_library"],
 )
 
 go_test(
@@ -42,12 +40,12 @@ go_test(
         "osreleaseparser_test.go",
         "vulners_api_test.go",
     ],
-    visibility = ["//visibility:public"],
-    embed = [":go_default_library"],
     data = [
         ":testdata/os-release.1.txt",
         ":testdata/os-release.2.txt",
     ],
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_github_stretchr_testify//assert:go_default_library",
     ],

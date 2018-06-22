@@ -14,14 +14,12 @@ go_image(
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "overlord_runner.go",
-    ],
+    srcs = ["overlord_runner.go"],
     importpath = "github.com/google/minions/overlord/runner",
     visibility = ["//visibility:private"],
     deps = [
-        "//overlord:go_default_library",
-        "//overlord:overlord_go_proto",
+        "//go/overlord:go_default_library",
+        "//proto/overlord:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],
 )

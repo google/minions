@@ -19,7 +19,7 @@ it finds to the caller. Each minion is interested in certain files that can
 be discovered using ListInitialInterests method. A minion can also return
 additional interests to the caller as a result of an AnalyzeFiles method call.
 */
-package minion
+package minions
 
 import (
 	pb "github.com/google/minions/proto/minions"

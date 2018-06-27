@@ -1,0 +1,11 @@
+java_test(
+    name = "OsReleaseParserTest",
+    srcs = ["OsReleaseParserTest.java"],
+    test_class = "org.minions_scanner.minions.rpm.OsReleaseParserTest",
+    deps = [
+        "//java/main/org/minions_scanner/minions/rpm",
+        "@com_google_truth//jar",
+        "@junit//jar",
+    ],
+)
+

@@ -13,27 +13,55 @@
 
 package org.minions_scanner.minions.rpm;
 
-import static com.google.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.Lists;
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Splitter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.io.File;
 
+
 class OsReleaseParser {
 
-  public ParseResult getOsAndVersion(File file) {
-    try (Stream<String> lines = Files.lines(file)) {
-      lines
-          .map(line -> parseLine(line))
-          .collect(Collectors.toMap(keyMapper, valueMapper));
-		} catch (IOException e) {}
+	/**
+	 * Parses the os and version information from the stream of lines representing an os-release
+	 * file and returns a structured {@link ParseResult}.
+	 */
+  public static ParseResult getOsAndVersion(Stream<String> lines) {
+		Map<String, String> parsedFile = lines
+			.filter(line -> !line.startsWith("#")) // Skip comments
+			.filter(line -> !line.isEmpty()) // Skip empty lines
+			.filter(line -> CharMatcher.is('=').countIn(line) == 1) // Exclude tricky lines
+			.map(line -> parseLine(line)).collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+		return new ParseResult(parsedFile.get("NAME"), parsedFile.get("VERSION_ID"));
   }
 
-  @Immutable
-  class ParseResult {
+	/** Parses a single line and returns KEY -> VALUE entry */
+	private static Entry<String, String> parseLine(String line) {
+		List<String> splitted = Lists.newArrayList(
+				Splitter.on('=').trimResults(CharMatcher.anyOf(" '`\"")).split(line));
+		String key = replaceExpansions(splitted.get(0));
+		String value = replaceExpansions(splitted.get(1));
+		return new SimpleImmutableEntry(key, value);
+	}
+
+	private static String replaceExpansions(String in) {
+		return in.replace("\\\"", "\"").replace("\\\\", "\\")
+				.replace("\\$", "$").replace("\\`", "`");
+	}
+
+	/** Data class holding the interesting results of parsing the OsRelease file. */
+  public static class ParseResult {
+		private final String os;
+		private final String version;
+
     public ParseResult(String os, String version) {
       this.os = checkNotNull(os);
       this.version = checkNotNull(version);
@@ -48,68 +76,3 @@ class OsReleaseParser {
     }
   }
 }
-
-
-/*func parseOsReleaseLine(line string) (key string, value string, err error) {
-  
-	// Skip empty lines and comments
-	if line[0] == '#' || len(line) == 0 {
-		err = errors.New("Skip the line")
-		return
-	}
-
-	parts := strings.SplitN(line, "=", 2)
-	if len(parts) != 2 {
-		err = errors.New("Not enough or too many =s")
-		return
-	}
-
-	key = strings.Trim(parts[0], " ")
-	value = stripAndExpand(strings.Trim(parts[1], " "))
-	return
-}
-
-func stripAndExpand(in string) string {
-	out := in
-	// Quotes (ok, this might over-match)
-	out = strings.TrimPrefix(out, `'`)
-	out = strings.TrimPrefix(out, `"`)
-	out = strings.TrimSuffix(out, `'`)
-	out = strings.TrimSuffix(out, `"`)
-	// Expansion
-	out = strings.Replace(out, `\"`, `"`, -1)
-	out = strings.Replace(out, `\$`, `$`, -1)
-	out = strings.Replace(out, `\\`, `\`, -1)
-	out = strings.Replace(out, "\\`", "`", -1)
-	return out
-}
-
-func getOsAndversion(f *os.File) (operatingSystem string, version string, err error) {
-	s := bufio.NewScanner(f)
-	var lines []string
-	for s.Scan() {
-		lines = append(lines, s.Text())
-	}
-
-	for _, line := range lines {
-		k, v, err := parseOsReleaseLine(line)
-		if err != nil {
-			continue
-		}
-		switch k {
-		case "NAME":
-			operatingSystem = v
-			break
-		case "VERSION_ID":
-			version = v
-			break
-		}
-	}
-
-	if operatingSystem == "" || version == "" {
-		return "", "", errors.New("Could not identify os or version")
-	}
-
-	return operatingSystem, version, nil
-}
-*/

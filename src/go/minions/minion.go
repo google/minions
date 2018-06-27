@@ -12,7 +12,7 @@
 //	limitations under the License.
 
 /*
-Package minion specifies a common Minion interface.
+Package minions specifies a common Minion interface.
 
 A minion performs certain checks on the files provided and returns issues
 it finds to the caller. Each minion is interested in certain files that can

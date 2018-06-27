@@ -9,12 +9,14 @@ java_binary(
 
 java_library(
     name = "rpm",
-    srcs = ["RpmMinion.java"],
+    srcs = glob(["*.java"]),
+    visibility = ["//visibility:public"],
     deps = [
         "//java/main/org/minions_scanner/minions:minion_executor",
         "//proto/minions:minions_java_proto",
         "//proto/minions:minions_java_proto_grpc",
-        "@com_sleepycat_je//jar",
+        "@com_google_guava_guava//jar",
+        "@berkeleydb//:berkeley_db_binary",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",
     ],

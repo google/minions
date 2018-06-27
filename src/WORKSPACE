@@ -28,12 +28,18 @@ load(
 
 grpc_java_repositories()
 
-maven_jar(
-	name = "com_sleepycat_je",
-    # This is the latest version available on Maven central.
-    # More modern versions are on Oracle's Maven servers, which
-    # require authentication and dancing under the full moon.
-	artifact = "com.sleepycat:je:5.0.73",
+new_local_repository(
+    name = "berkeleydb",
+    path = "/usr/share/java/",
+    build_file_content = """
+java_import(
+        name = "berkeley_db_binary",
+        visibility = ["//visibility:public"],
+        jars = [
+            "db.jar"
+        ],
+    )
+    """,
 )
 
 git_repository(
@@ -94,6 +100,16 @@ go_library(
     """,
     remote = "https://github.com/google/uuid",
     tag = "0.2",
+)
+
+maven_jar(
+    name = "com_google_truth",
+    artifact = "com.google.truth:truth:jar:0.31",
+)
+
+maven_jar(
+    name = "junit",
+    artifact = "junit:junit-dep:4.10",
 )
 
 # See this URL for a list of the things this imports:

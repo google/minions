@@ -1,9 +1,0 @@
-java_library(
-    name = "minion_executor",
-    srcs = ["MinionExecutor.java"],
-    visibility = ["//:__subpackages__"],
-    deps = [
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//stub",
-    ],
-)

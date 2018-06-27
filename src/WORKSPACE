@@ -13,35 +13,6 @@ load(
     "go_rules_dependencies",
 )
 
-# note that the order matters here. These imports redefine
-# the proto library. Java time!
-git_repository(
-    name = "io_grpc_grpc_java",
-    remote = "https://github.com/grpc/grpc-java.git",
-    tag = "v1.12.0",
-)
-
-load(
-    "@io_grpc_grpc_java//:repositories.bzl",
-    "grpc_java_repositories",
-)
-
-grpc_java_repositories()
-
-new_local_repository(
-    name = "berkeleydb",
-    path = "/usr/share/java/",
-    build_file_content = """
-java_import(
-        name = "berkeley_db_binary",
-        visibility = ["//visibility:public"],
-        jars = [
-            "db.jar"
-        ],
-    )
-    """,
-)
-
 git_repository(
     name = "bazel_gazelle",
     remote = "https://github.com/bazelbuild/bazel-gazelle.git",
@@ -100,16 +71,6 @@ go_library(
     """,
     remote = "https://github.com/google/uuid",
     tag = "0.2",
-)
-
-maven_jar(
-    name = "com_google_truth",
-    artifact = "com.google.truth:truth:jar:0.31",
-)
-
-maven_jar(
-    name = "junit",
-    artifact = "junit:junit-dep:4.10",
 )
 
 # See this URL for a list of the things this imports:

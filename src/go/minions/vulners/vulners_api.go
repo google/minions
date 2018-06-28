@@ -103,11 +103,11 @@ type vulnPackage struct {
 }
 
 type vulnResponseData struct {
-	Cvss     cvssScore `json:"cvss"`
-	CveList  []string  `json:"cvelist"`
-	Packages map[string]map[string]vulnPackage
-	// This struct should also have a packages data structure
-	// but the vulners API are quite frankly not so funny in that regard :)
+	Cvss      cvssScore `json:"cvss"`
+	CveList   []string  `json:"cvelist"`
+	Packages  map[string]map[string]vulnPackage
+	Error     string `json:"error"`
+	ErrorCode int    `json:"errorCode"`
 }
 
 type vulnResponse struct {
@@ -131,12 +131,25 @@ func (c *Client) getVulnerabilitiesForPackages(os string, osVersion string, pack
 		APIKey:  c.apiKey,
 	}
 	json, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
 
-	resp, _ := resty.R().
+	// Handy for debugging.
+	// resty.SetDebug(true)
+
+	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(json).
 		SetResult(&vulnResponse{}). // Throw the response directly in a JSON structure
 		Post(fmt.Sprintf("%s/audit/audit", c.baseURL.String()))
+	if err != nil {
+		return nil, err
+	}
+	r := resp.Result().(*vulnResponse)
+	if r.Result == "ERROR" {
+		return nil, errors.New("ERROR response from API backend: " + r.Data.Error)
+	}
 
-	return resp.Result().(*vulnResponse), nil
+	return r, nil
 }

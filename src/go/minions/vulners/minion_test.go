@@ -23,12 +23,12 @@ func TestAnalyzeFiles_local(t *testing.T) {
 	// TODO(claudio): this is clearly only meant for local testing for now ;-)
 	apiKey := ""
 	m := NewMinion(apiKey)
-	resp, _ := m.AnalyzeFiles(nil, nil)
-
+	resp, err := m.AnalyzeFiles(nil, nil)
+	assert.NoError(t, err)
 	for _, f := range resp.GetFindings() {
-		print(f.GetVulnerableResources()[0].GetAdditionalInfo())
+		print("Vulnerable package: " + f.GetVulnerableResources()[0].GetAdditionalInfo())
 		print("\n")
-		print(f.GetAdvisory().GetReference())
+		print("Advisory: " + f.GetAdvisory().GetReference())
 		print("\n")
 	}
 }

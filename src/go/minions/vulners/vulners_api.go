@@ -85,8 +85,8 @@ func (c *Client) getVulnerabilitiesForCpe(cpe string, maxVulnerabilities int) (r
 
 // Useful data types for the audit calls below
 type cvssScore struct {
-	Score  int    `json:"score"`
-	Vector string `json:"vector"`
+	Score  float32 `json:"score"`
+	Vector string  `json:"vector"`
 }
 
 type vulnPackage struct {
@@ -103,11 +103,12 @@ type vulnPackage struct {
 }
 
 type vulnResponseData struct {
-	Cvss      cvssScore `json:"cvss"`
-	CveList   []string  `json:"cvelist"`
-	Packages  map[string]map[string]vulnPackage
-	Error     string `json:"error"`
-	ErrorCode int    `json:"errorCode"`
+	Cvss          cvssScore `json:"cvss"`
+	CveList       []string  `json:"cvelist"`
+	Packages      map[string]map[string][]vulnPackage
+	Error         string `json:"error"`
+	ErrorCode     int    `json:"errorCode"`
+	CumulativeFix string `json:"cumulativeFix"`
 }
 
 type vulnResponse struct {
@@ -136,7 +137,7 @@ func (c *Client) getVulnerabilitiesForPackages(os string, osVersion string, pack
 	}
 
 	// Handy for debugging.
-	// resty.SetDebug(true)
+	//resty.SetDebug(true)
 
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").

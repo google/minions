@@ -84,10 +84,72 @@ func createPkgServer(t *testing.T) *httptest.Server {
 			assertContainsJSONElement(t, dat, "os")
 			assertContainsJSONElement(t, dat, "version")
 			assertContainsJSONElement(t, dat, "package")
-			response := `{"result": "OK", "data": {}}`
 			// Needed as the APIs parse the response
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
+			response := `
+			{
+				 "result": "OK",
+				 "data": {
+						"packages": {
+							 "gnupg 1.4.22 x86_64": {
+									"USN-3675-1": [
+										 {
+												"package": "gnupg 1.4.22 x86_64",
+												"providedVersion": "1.4.22",
+												"bulletinVersion": "2.2.4-1ubuntu1.1",
+												"providedPackage": "gnupg 1.4.22 x86_64",
+												"bulletinPackage": "UNKNOWN",
+												"operator": "lt",
+												"bulletinID": "USN-3675-1",
+												"cvelist": [
+													 "CVE-2018-12020",
+													 "CVE-2018-9234"
+												],
+												"cvss": {
+													 "score": 5.0,
+													 "vector": "AV:NETWORK/AC:LOW/Au:NONE/C:PARTIAL/I:NONE/A:NONE/"
+												},
+												"fix": "sudo apt-get --assume-yes install --only-upgrade gnupg"
+										 }
+									]
+							 }
+						},
+						"vulnerabilities": [
+							 "USN-3675-1"
+						],
+						"reasons": [
+							 {
+									"package": "gnupg 1.4.22 x86_64",
+									"providedVersion": "1.4.22",
+									"bulletinVersion": "2.2.4-1ubuntu1.1",
+									"providedPackage": "gnupg 1.4.22 x86_64",
+									"bulletinPackage": "UNKNOWN",
+									"operator": "lt",
+									"bulletinID": "USN-3675-1",
+									"cvelist": [
+										 "CVE-2018-12020",
+										 "CVE-2018-9234"
+									],
+									"cvss": {
+										 "score": 5.0,
+										 "vector": "AV:NETWORK/AC:LOW/Au:NONE/C:PARTIAL/I:NONE/A:NONE/"
+									},
+									"fix": "sudo apt-get --assume-yes install --only-upgrade gnupg"
+							 }
+						],
+						"cvss": {
+							 "score": 7.5,
+							 "vector": "AV:NETWORK/AC:LOW/Au:NONE/C:PARTIAL/I:PARTIAL/A:PARTIAL/"
+						},
+						"cvelist": [
+							 "CVE-2018-12020",
+							 "CVE-2018-9234"
+						],
+						"cumulativeFix": "sudo apt-get --assume-yes install --only-upgrade xdg-utils",
+						"id": "foo"
+				 }
+			}`
 			w.Write([]byte(response))
 		default:
 			t.Fatalf("Unrecognized path requested %v", r.URL.Path)

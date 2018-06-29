@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//go/minions/vulners/dpkg:go_default_library",
+        "//go/minions/vulners/rpm:go_default_library",
         "//proto/minions:go_default_library",
         "@com_github_golang_protobuf//ptypes:go_default_library",
         "@in_gopkg_resty_v1//:go_default_library",

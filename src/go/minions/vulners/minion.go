@@ -29,6 +29,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 
 	"github.com/google/minions/minions/vulners/dpkg"
+	"github.com/google/minions/minions/vulners/rpm"
 	pb "github.com/google/minions/proto/minions"
 	"golang.org/x/net/context"
 )
@@ -66,7 +67,7 @@ func (m Minion) ListInitialInterests(ctx context.Context, req *pb.ListInitialInt
 
 	rpmDatabase := pb.Interest{ // Used for RPM based systems.
 		DataType:      pb.Interest_METADATA_AND_DATA,
-		PathRegexp:    "/var/lib/rpm/*",
+		PathRegexp:    "/var/lib/rpm/Packages",
 		ContentRegexp: ""}
 
 	interests := []*pb.Interest{&dpkSstatus, &osReleaseEtc, &osReleaseUsrLib, &rpmDatabase}
@@ -86,26 +87,34 @@ func (m Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (
 	defer f.Close()
 	distro, version, err := getOsAndversion(f)
 	if err != nil {
-		return nil, err
+		return nil, err // TODO(paradoxengine): uniform error handling here (return error to grpc)
 	}
 
-	// Now read the package storage and build a map of installed packages
+	// Now read the package storage and build a map of installed packages for Debian
 	df, err := os.Open("/var/lib/dpkg/status")
-	defer df.Close()
 	if err != nil {
-		return nil, err // TODO(claudio): uniform error handling here (return error to grpc)
+		return nil, err // TODO(paradoxengine): uniform error handling here (return error to grpc)
 	}
-	s := dpkg.NewScanner(df)
+	defer df.Close()
+	dpkgPackages, err := getDpkgPackages(df)
+	if err != nil {
+		return nil, err // TODO(paradoxengine): uniform error handling here (return error to grpc)
+	}
+
+	// Now read the package storage and build a map of installed packages for Debian
+	rpm, err := os.Open("/home/blackfire/Downloads/Packages")
+	if err != nil {
+		return nil, err // TODO(paradoxengine): uniform error handling here (return error to grpc)
+	}
+	defer df.Close()
+	rpmPackages, err := getRpmPackages(rpm)
+	if err != nil {
+		return nil, err // TODO(paradoxengine): uniform error handling here (return error to grpc)
+	}
 
 	var packages []string
-	for entry, err := s.Scan(); err != io.EOF; entry, err = s.Scan() {
-		if err != nil {
-			panic(err)
-		}
-		p := []string{entry["package"], entry["version"], entry["architecture"]}
-		pkg := strings.Join(p, " ")
-		packages = append(packages, pkg)
-	}
+	packages = append(packages, dpkgPackages...)
+	packages = append(packages, rpmPackages...)
 
 	// Now send the list of packages to the vulners API to get vulns
 	response, err := m.apiClient.getVulnerabilitiesForPackages(distro, version, packages)
@@ -118,28 +127,7 @@ func (m Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (
 	findings := []*pb.Finding{}
 	for packageName, issues := range (*response).Data.Packages {
 		for issueName, issueDetails := range issues {
-			adv := &pb.Advisory{
-				Reference:      issueName,
-				Description:    strings.Join(issueDetails.CveList, ","),
-				Recommendation: issueDetails.Fix,
-			}
-			source := &pb.Source{
-				ScanId:        req.GetScanId(),
-				Minion:        "Vulners",
-				DetectionTime: ptypes.TimestampNow(),
-			}
-			resources := []*pb.Resource{&pb.Resource{
-				Path:           "",
-				AdditionalInfo: packageName,
-			}}
-			newFind := &pb.Finding{
-				Advisory:            adv,
-				VulnerableResources: resources,
-				Source:              source,
-				Accuracy:            pb.Finding_ACCURACY_AVERAGE, // Current trust level in vulners, may be adjusted based on distro in the future
-				Severity:            pb.Finding_SEVERITY_UNKNOWN, // TODO(claudio): convert CVSS into severity
-			}
-			findings = append(findings, newFind)
+			findings = append(findings, convertFinding(packageName, issues, issueName, issueDetails, req.GetScanId()))
 		}
 	}
 
@@ -147,4 +135,66 @@ func (m Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (
 	// located sine day one, so let's just return results.
 	resp := pb.AnalyzeFilesResponse{NewInterests: nil, Findings: findings}
 	return &resp, nil
+}
+
+// convertFinding builds an internal representation of the fining from the vulners
+// data. Note that vulners provides an array of vulnPackage, but we really only
+// care about the first one at this point, so we simplify the code.
+func convertFinding(packageName string, issues map[string][]vulnPackage, issueName string, issueDetails []vulnPackage, scanID string) *pb.Finding {
+	adv := &pb.Advisory{
+		Reference:      issueName,
+		Description:    strings.Join(issueDetails[0].CveList, ","),
+		Recommendation: issueDetails[0].Fix,
+	}
+	source := &pb.Source{
+		ScanId:        scanID,
+		Minion:        "Vulners",
+		DetectionTime: ptypes.TimestampNow(),
+	}
+	resources := []*pb.Resource{&pb.Resource{
+		Path:           "",
+		AdditionalInfo: packageName,
+	}}
+	newFind := &pb.Finding{
+		Advisory:            adv,
+		VulnerableResources: resources,
+		Source:              source,
+		Accuracy:            pb.Finding_ACCURACY_AVERAGE, // Current trust level in vulners, may be adjusted based on distro in the future
+		Severity:            pb.Finding_SEVERITY_UNKNOWN, // TODO(claudio): convert CVSS into severity
+	}
+	return newFind
+}
+
+// Analyzes the dpkg database and returns a list of packages, versions and
+// architectures suitable to be fed in vulners.
+// Note: my Java self feels this really needed a data class rather than a string
+// but I'm told this is more idiomatic and what do I know about Go.
+func getDpkgPackages(df *os.File) ([]string, error) {
+	s := dpkg.NewScanner(df)
+
+	var packages []string
+	for entry, err := s.Scan(); err != io.EOF; entry, err = s.Scan() {
+		if err != nil {
+			return nil, err
+		}
+		p := []string{entry["package"], entry["version"], entry["architecture"]}
+		pkg := strings.Join(p, " ")
+		packages = append(packages, pkg)
+	}
+	return packages, nil
+}
+
+// Analyzes the RPM database and returns a list of packages, versions and
+// architectures suitable to be fed in vulners.
+func getRpmPackages(db *os.File) ([]string, error) {
+	var packages []string
+	pkgs, err := rpm.ReadDb(db)
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range pkgs {
+		pkg := []string{p.Name, p.Version, p.Architecture}
+		packages = append(packages, strings.Join(pkg, " "))
+	}
+	return packages, nil
 }

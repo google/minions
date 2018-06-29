@@ -55,6 +55,14 @@ go_repository(
     tag = "v1.2.1",
 )
 
+go_repository(
+    name = "com_github_necomeshi_rpmlib",
+    commit = "213163e05c8656cac508c4b1352179d6f2e73202",
+    importpath = "github.com/necomeshi/rpmlib",
+    remote = "https://github.com/paradoxengine/rpmlib",
+    vcs = "git",
+)
+
 new_git_repository(
     name = "com_github_google_uuid",
     build_file_content = """

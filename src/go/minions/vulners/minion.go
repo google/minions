@@ -188,7 +188,7 @@ func getDpkgPackages(df *os.File) ([]string, error) {
 // architectures suitable to be fed in vulners.
 func getRpmPackages(db *os.File) ([]string, error) {
 	var packages []string
-	pkgs, err := rpm.ReadDb(db)
+	pkgs, err := rpm.ReadDbAndCleanup(db)
 	if err != nil {
 		return nil, err
 	}

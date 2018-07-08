@@ -24,7 +24,10 @@ import (
 )
 
 var (
-	overlordAddr = flag.String("overlord_addr", "127.0.0.1:10000", "Overlord address in the format of host:port")
+	overlordAddr   = flag.String("overlord_addr", "127.0.0.1:10000", "Overlord address in the format of host:port")
+	maxFilesPerReq = flag.Int("max_files_request", 10, "Maximum number of files sent for each ScanFiles RPC")
+	maxKBPerReq    = flag.Int("max_kb_request", 1024, "Maximum KBs to be sent with each ScanFiles RPC")
+	rootPath       = flag.String("root_path", "/", "Root directory that we'll serve files from.")
 )
 
 func startScan(client pb.OverlordClient) {
@@ -33,13 +36,27 @@ func startScan(client pb.OverlordClient) {
 	defer cancel()
 	response, err := client.CreateScan(ctx, &pb.CreateScanRequest{})
 	if err != nil {
-		log.Fatalf("%v.Scan(_) = _, %v", client, err)
+		log.Fatalf("%v.CreateScan(_) = _, %v", client, err)
 	}
-	log.Printf("Received response: %s", response)
+	scanID := response.GetScanId()
+	log.Printf("Created scan %s", scanID)
 
-	log.Printf("Will now send the following files.")
+	log.Printf("Will now send files for each interests, a bit at a time")
 	for _, i := range response.GetInterests() {
-		log.Printf(i.GetPathRegexp())
+		log.Printf("Sending over: %s", i.GetPathRegexp())
+		// Send one request per interest
+		files, err := loadFiles(i, *maxKBPerReq, *maxFilesPerReq, *rootPath)
+		if err != nil {
+			log.Fatalf("Failure while loading files. %v", err)
+		}
+
+		for _, fs := range files {
+			for _, f := range fs {
+				log.Printf("Sending over file %s", f.Metadata.GetPath())
+			}
+			sfr := &pb.ScanFilesRequest{ScanId: scanID, Files: fs}
+			client.ScanFiles(ctx, sfr)
+		}
 	}
 }
 

@@ -15,6 +15,7 @@ package main
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -51,20 +52,21 @@ func loadFiles(i *minions.Interest, maxKb int, maxFiles int, root string) ([][]*
 		if err != nil {
 			return nil, err
 		}
+		f := &pb.File{Metadata: metadata, DataChunks: nil}
 		switch dataType := i.GetDataType(); dataType {
 		case minions.Interest_METADATA:
-			fs = append(fs, &pb.File{Metadata: metadata, DataChunks: nil})
 			break
 		case minions.Interest_METADATA_AND_DATA:
 			chunks, err := getDataChunks(p)
 			if err != nil {
 				return nil, err
 			}
-			fs = append(fs, &pb.File{Metadata: metadata, DataChunks: chunks})
+			f.DataChunks = chunks
 			break
 		default:
 			return nil, errors.New("Unknown interest type")
 		}
+		fs = append(fs, f)
 	}
 	files = append(files, fs)
 
@@ -82,20 +84,42 @@ func getMetadata(path string) (*minions.FileMetadata, error) {
 		// and proceed, but let's try as is now.
 		return nil, err
 	}
-
 	sys := s.Sys()
 	if sys == nil {
 		return nil, errors.New("cannot access OS-specific metadata")
 	}
 
-	// TODO(paradoxengine): these conversions are all over the place :-()
-	owneru := int32(sys.(*syscall.Stat_t).Uid)
-	ownerg := int32(sys.(*syscall.Stat_t).Gid)
-	perm := int32(s.Mode().Perm())
-	m := &minions.FileMetadata{Path: path, Permissions: perm, OwnerUid: owneru, OwnerGid: ownerg}
+	m := &minions.FileMetadata{Path: path}
+	// TODO(paradoxengine): these conversions are all over the place :-(
+	m.OwnerUid = int32(sys.(*syscall.Stat_t).Uid)
+	m.OwnerGid = int32(sys.(*syscall.Stat_t).Gid)
+	m.Permissions = uint32(s.Mode())
+	m.Size = s.Size()
 	return m, nil
 }
 
+// getDataChunks splits the file at the path in a set of chunks.
 func getDataChunks(path string) ([]*pb.DataChunk, error) {
-	return nil, nil
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var chunks []*pb.DataChunk
+	// Arbitrary size of each data chunk.
+	var chunkSize = 1024 * 1024 * 2
+	dataLen := len(data)
+	for i := 0; i < dataLen; i += chunkSize {
+		var chunk []byte
+		if i+chunkSize >= dataLen {
+			chunk = data[i:]
+		} else {
+			chunk = data[i : i+chunkSize]
+		}
+		chunks = append(chunks, &pb.DataChunk{
+			Offset: int64(i),
+			Data:   chunk,
+		})
+	}
+	return chunks, nil
 }

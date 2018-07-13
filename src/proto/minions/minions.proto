@@ -34,7 +34,7 @@ message FileMetadata {
   // Full path to the file, including the file name.
   string path = 1;
   // Posix permissions on the file.
-  int32 permissions = 2;
+  uint32 permissions = 2;
   // Posix file owner.
   int32 owner_uid = 3;
   // Posix file group owner.

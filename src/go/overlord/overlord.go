@@ -15,37 +15,72 @@ package overlord
 
 import (
 	"github.com/google/uuid"
+	"google.golang.org/grpc"
 
+	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 	"golang.org/x/net/context"
 )
 
-// Overlord is the orchestrator of Minions' infrastructure.
-type Overlord struct {
+// Server implements the OverlordServer interface, the orchestrator of Minions' infrastructure.
+type Server struct {
+	minions          map[string]mpb.MinionClient // THe minions we know about and their address
+	initialInterests []*mpb.Interest
+}
+
+// New returns an initialized Server, which connects to a set of pre-specified minions
+// to initialize them.
+func New(ctx context.Context, minionAddresses []string, opts ...grpc.DialOption) (*Server, error) {
+	server := &Server{
+		minions:          make(map[string]mpb.MinionClient),
+		initialInterests: nil,
+	}
+
+	// Build map of minions.
+	for _, addr := range minionAddresses {
+		c, err := grpc.Dial(addr, opts...)
+		if err != nil {
+			return nil, err
+		}
+		server.minions[addr] = mpb.NewMinionClient(c)
+	}
+
+	// Init initial interests by querying each minion.
+	for _, m := range server.minions {
+		// TODO(paradoxengine): most likely, a deadline here?
+		intResp, err := m.ListInitialInterests(ctx, &mpb.ListInitialInterestsRequest{})
+		if err != nil {
+			return nil, err
+		}
+		for _, i := range intResp.GetInterests() {
+			server.initialInterests = append(server.initialInterests, i)
+		}
+	}
+
+	return server, nil
 }
 
 // CreateScan set up a security scan which can then be fed files via ScanFiles.
 // It returns a UUID identifying the scan from now on and the list of initial
 // Interests.
-func (s *Overlord) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb.Scan, error) {
+func (s *Server) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb.Scan, error) {
 	// Scans are tracked by UUID, so let's start by generating it.
 	scan := &pb.Scan{}
 	u, _ := uuid.NewRandom()
 	scan.ScanId = u.String()
-
-	// TODO(claudio): fetch interests from all registered minions and add them here.
-
+	scan.Interests = s.initialInterests
+	// TODO(claudioc): this is where we'd create the state of the scan the first time.
 	return scan, nil
 }
 
 // ListInterests returns the interests for a given scan, i.e. the files or metadata
 // that have to be fed the Overlord for security scanning.
-func (s *Overlord) ListInterests(ctx context.Context, req *pb.ListInterestsRequest) (*pb.ListInterestsResponse, error) {
+func (s *Server) ListInterests(ctx context.Context, req *pb.ListInterestsRequest) (*pb.ListInterestsResponse, error) {
 	return &pb.ListInterestsResponse{Interests: nil, NextPageToken: "token"}, nil
 }
 
 // ScanFiles runs security scan on a set of files, assuming they were actually
 // needed by the backend minions.
-func (s *Overlord) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.ScanFilesResponse, error) {
+func (s *Server) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.ScanFilesResponse, error) {
 	return &pb.ScanFilesResponse{NewInterests: nil, Results: nil}, nil
 }

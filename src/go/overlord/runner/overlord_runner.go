@@ -18,22 +18,40 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
+
+	"golang.org/x/net/context"
 
 	"github.com/google/minions/overlord"
 	pb "github.com/google/minions/proto/overlord"
 	"google.golang.org/grpc"
 )
 
+type flagStrings []string
+
+func (f *flagStrings) String() string {
+	return fmt.Sprint(strings.Join(*f, ""))
+}
+
+func (f *flagStrings) Set(value string) error {
+	*f = append(*f, value)
+	return nil
+}
+
 var (
-	port = flag.Int("port", 10000, "Overlord server port")
+	minions flagStrings
+	port    = flag.Int("port", 10000, "Overlord server port")
 )
 
-func newServer() *overlord.Overlord {
-	s := &overlord.Overlord{}
-	return s
+func newServer() (*overlord.Server, error) {
+	ctx := context.Background()
+	// TODO(paradoxengine): Once TLS auth is impelemneted everywhere, remove the insecure flag.
+	return overlord.New(ctx, minions, grpc.WithInsecure())
 }
 
 func main() {
+	flag.Var(&minions, "", "Addresses of minions to boot against")
+
 	flag.Parse()
 	fmt.Println("Starting up overlord server")
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
@@ -42,6 +60,11 @@ func main() {
 	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
-	pb.RegisterOverlordServer(grpcServer, newServer())
+	s, err := newServer()
+	if err != nil {
+		log.Fatalf("failed to build server: %v", err)
+	}
+	pb.RegisterOverlordServer(grpcServer, s)
+	fmt.Println("Server created and registered, entering busy loop!")
 	grpcServer.Serve(lis)
 }

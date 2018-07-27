@@ -7,7 +7,7 @@ go_library(
         "osreleaseparser.go",
         "vulners_api.go",
     ],
-    importpath = "github.com/google/minions/minions/vulners",
+    importpath = "github.com/google/minions/go/minions/vulners",
     visibility = ["//visibility:public"],
     deps = [
         "//go/minions/vulners/dpkg:go_default_library",

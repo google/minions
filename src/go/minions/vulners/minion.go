@@ -28,8 +28,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 
-	"github.com/google/minions/minions/vulners/dpkg"
-	"github.com/google/minions/minions/vulners/rpm"
+	"github.com/google/minions/go/minions/vulners/dpkg"
+	"github.com/google/minions/go/minions/vulners/rpm"
 	pb "github.com/google/minions/proto/minions"
 	"golang.org/x/net/context"
 )

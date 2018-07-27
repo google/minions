@@ -22,7 +22,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/google/minions/overlord"
+	"github.com/google/minions/go/overlord"
 	pb "github.com/google/minions/proto/overlord"
 	"google.golang.org/grpc"
 )

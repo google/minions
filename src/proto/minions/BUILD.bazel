@@ -17,10 +17,6 @@ go_proto_library(
     importpath = "github.com/google/minions/proto/minions",
     proto = ":minions_proto",
     visibility = ["//visibility:public"],
-# Gazelle says this is not needed. Testing.
-#    deps = [
-#       "@com_github_golang_protobuf//ptypes/timestamp:go_default_library",
-#    ],
 )
 
 go_library(

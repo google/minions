@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["interests.go"],
-    importpath = "github.com/google/minions/overlord/interests",
+    importpath = "github.com/google/minions/go/overlord/interests",
     visibility = ["//visibility:public"],
     deps = [
         "//proto/minions:go_default_library",

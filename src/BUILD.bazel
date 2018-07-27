@@ -8,7 +8,7 @@ go_prefix("github.com/google/minions")
 gazelle(
     name = "gazelle",
     command = "update",
-    mode = "diff",
+    mode = "fix",
     prefix = "github.com/google/minions",
 )
 

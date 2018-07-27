@@ -15,7 +15,7 @@ go_image(
 go_library(
     name = "go_default_library",
     srcs = ["overlord_runner.go"],
-    importpath = "github.com/google/minions/overlord/runner",
+    importpath = "github.com/google/minions/go/overlord/runner",
     visibility = ["//visibility:private"],
     deps = [
         "//go/overlord:go_default_library",

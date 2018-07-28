@@ -1,3 +1,6 @@
+# Gazelle does not understand multiple protos in a dir.
+# gazelle:exclude proto
+
 package(default_visibility = ["//visibility:public"])
 
 load("@bazel_gazelle//:def.bzl", "gazelle")

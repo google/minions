@@ -3,20 +3,24 @@ workspace(name = "minions")
 git_repository(
     name = "io_bazel_rules_go",
     remote = "https://github.com/bazelbuild/rules_go.git",
-    tag = "0.12.0",
+    tag = "0.13.0",
 )
 
 load(
     "@io_bazel_rules_go//go:def.bzl",
     "go_register_toolchains",
-    "go_repository",
     "go_rules_dependencies",
 )
 
 git_repository(
     name = "bazel_gazelle",
     remote = "https://github.com/bazelbuild/bazel-gazelle.git",
-    tag = "0.12.0",
+    tag = "0.13.0",
+)
+
+load(
+    "@bazel_gazelle//:deps.bzl",
+    "go_repository"
 )
 
 # Buildifier
@@ -40,13 +44,8 @@ git_repository(
 git_repository(
     name = "in_gopkg_resty_v1",
     remote = "https://github.com/go-resty/resty",
-    tag = "v1.5",
-)
-
-git_repository(
-    name = "org_pubref_rules_protobuf",
-    remote = "https://github.com/pubref/rules_protobuf.git",
-    tag = "v0.8.1",
+    # tag = "v1.7.0", Update once there is a new release.
+    commit = "d5d11335bfe189d4f9df3cbe153b3586d8cb2f74",
 )
 
 go_repository(
@@ -57,20 +56,17 @@ go_repository(
 
 go_repository(
     name = "com_github_necomeshi_rpmlib",
-    commit = "213163e05c8656cac508c4b1352179d6f2e73202",
     importpath = "github.com/necomeshi/rpmlib",
-    remote = "https://github.com/paradoxengine/rpmlib",
-    vcs = "git",
-)
+    tag = "v1.0.1",
+    )
 
 new_git_repository(
     name = "com_github_google_uuid",
     build_file_content = """
-load("@io_bazel_rules_go//go:def.bzl", "go_prefix")
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
-go_prefix("github.com/google/uuid")
 go_library(
     name = "go_default_library",
+    importpath = "github.com/google/uuid",
     srcs = glob(["*.go"], exclude=["*_test.go"]),
     deps = [
     ],

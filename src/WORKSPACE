@@ -55,6 +55,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_patrickmn_go-cache",
+    importpath = "github.com/patrickmn/go-cache",
+    tag = "v2.1.0",
+)
+
+go_repository(
     name = "com_github_necomeshi_rpmlib",
     importpath = "github.com/necomeshi/rpmlib",
     tag = "v1.0.1",

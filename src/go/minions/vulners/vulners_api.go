@@ -111,14 +111,16 @@ type vulnResponseData struct {
 	CumulativeFix string `json:"cumulativeFix"`
 }
 
-type vulnResponse struct {
+// VulnResponse contains the response to a query on the vulnerability state
+// of a set of packages.
+type VulnResponse struct {
 	Result string           `json:"result"`
 	Data   vulnResponseData `json:"data"`
 }
 
-// getVulnerabilitiesForPackages returns all known vulnerabilities from Vulners for the
+// GetVulnerabilitiesForPackages returns all known vulnerabilities from Vulners for the
 // combination of operating system, package and version.
-func (c *Client) getVulnerabilitiesForPackages(os string, osVersion string, packages []string) (result *vulnResponse, err error) {
+func (c *Client) GetVulnerabilitiesForPackages(os string, osVersion string, packages []string) (result *VulnResponse, err error) {
 	type getVulnForPkg struct {
 		OS      string   `json:"os"`
 		Version string   `json:"version"`
@@ -142,12 +144,12 @@ func (c *Client) getVulnerabilitiesForPackages(os string, osVersion string, pack
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(json).
-		SetResult(&vulnResponse{}). // Throw the response directly in a JSON structure
+		SetResult(&VulnResponse{}). // Throw the response directly in a JSON structure
 		Post(fmt.Sprintf("%s/audit/audit", c.baseURL.String()))
 	if err != nil {
 		return nil, err
 	}
-	r := resp.Result().(*vulnResponse)
+	r := resp.Result().(*VulnResponse)
 	if r.Result == "ERROR" {
 		return nil, errors.New("ERROR response from API backend: " + r.Data.Error)
 	}

@@ -21,8 +21,8 @@ import (
 )
 
 func TestVulnerablePackages(t *testing.T) {
-	file := openDb(t, "vulnerable")
-	pkgs, err := ReadDbAndCleanup(file)
+	basepath, err := os.Getwd()
+	pkgs, err := ReadDbAndCleanup(basepath + "/testdata/vulnerable/Packages")
 	assert.NoError(t, err)
 	assert.Equal(t, "pass", pkgs[0].Name)
 	assert.Equal(t, "1.7.1", pkgs[0].Version)
@@ -30,15 +30,8 @@ func TestVulnerablePackages(t *testing.T) {
 }
 
 func TestEmptyPackages(t *testing.T) {
-	file := openDb(t, "empty")
-	pkgs, err := ReadDbAndCleanup(file)
+	basepath, err := os.Getwd()
+	pkgs, err := ReadDbAndCleanup(basepath + "/testdata/empty/Packages")
 	assert.NoError(t, err)
 	assert.Empty(t, pkgs)
-}
-
-func openDb(t *testing.T, dir string) *os.File {
-	basepath, err := os.Getwd()
-	file, err := os.Open(basepath + "/testdata/" + dir + "/Packages")
-	assert.NoError(t, err)
-	return file
 }

@@ -18,7 +18,7 @@ package vulners
 import (
 	"bufio"
 	"errors"
-	"os"
+	"io"
 	"strings"
 )
 
@@ -55,8 +55,8 @@ func stripAndExpand(in string) string {
 	return out
 }
 
-func getOsAndversion(f *os.File) (operatingSystem string, version string, err error) {
-	s := bufio.NewScanner(f)
+func getOsAndversion(reader io.Reader) (operatingSystem string, version string, err error) {
+	s := bufio.NewScanner(reader)
 	var lines []string
 	for s.Scan() {
 		lines = append(lines, s.Text())

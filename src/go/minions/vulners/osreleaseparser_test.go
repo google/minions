@@ -34,7 +34,8 @@ func TestBuildsVersion(t *testing.T) {
 	}
 
 	for test := 1; test <= len(res); test++ {
-		filename := "testdata/os-release." + strconv.Itoa(test) + ".txt"
+		basepath, err := os.Getwd()
+		filename := basepath + "/testdata/os-release." + strconv.Itoa(test) + ".txt"
 		f, err := os.Open(filename)
 		os, ver, err := getOsAndversion(f)
 		if err != nil {

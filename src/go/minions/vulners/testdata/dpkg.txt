@@ -1,0 +1,26 @@
+Package: fonts-sil-abyssinica
+Status: install ok installed
+Priority: optional
+Section: fonts
+Installed-Size: 2208
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Architecture: all
+Multi-Arch: foreign
+Version: 1.500-1
+Replaces: ttf-sil-abyssinica (<< 1.200-1)
+Pre-Depends: dpkg (>= 1.15.6~)
+Suggests: fontconfig, libgraphite3, pango-graphite
+Breaks: ttf-sil-abyssinica (<< 1.200-1)
+Description: A great description
+
+Package: mokutil
+Status: install ok installed
+Priority: optional
+Section: admin
+Installed-Size: 58
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Architecture: amd64
+Version: 0.3.0-0ubuntu5
+Depends: libc6 (>= 2.14), libefivar1 (>= 32), libssl1.1 (>= 1.1.0)
+Description: tools 
+

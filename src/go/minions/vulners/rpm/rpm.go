@@ -111,7 +111,7 @@ func getPackages(dbpath string) ([]Package, error) {
 // ReadDbAndCleanup will link the db to a temporary so that the additional
 // files created will be deleted once done. As link won't work everywhere, if that
 // fails we'll copy the file instead, which is an important performance tax.
-func ReadDbAndCleanup(db *os.File) ([]Package, error) {
+func ReadDbAndCleanup(dbPath string) ([]Package, error) {
 	// Create temp directory where we'll copy the DB
 	dir, err := ioutil.TempDir("", "minionsrpm")
 	if err != nil {
@@ -123,7 +123,7 @@ func ReadDbAndCleanup(db *os.File) ([]Package, error) {
 	tempPath := dir + "/Packages"
 
 	// now either link or copy the file to a temp dir.
-	linkErr := os.Link(db.Name(), tempPath)
+	linkErr := os.Link(dbPath, tempPath)
 	var f *os.File
 	if linkErr != nil {
 		// Link failed for whatever reason, let's copy instead.
@@ -131,7 +131,11 @@ func ReadDbAndCleanup(db *os.File) ([]Package, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, err = io.Copy(f, db); err != nil {
+		origin, err := os.Open(dbPath)
+		if err != nil {
+			return nil, err
+		}
+		if _, err = io.Copy(f, origin); err != nil {
 			return nil, err
 		}
 		// Force sync

@@ -50,7 +50,7 @@ func TestGetVulnerabilitiesForPackages(t *testing.T) {
 	c.baseURL = url
 
 	pkgs := []string{"pcre-8.32-15.el7.x86_64"}
-	result, err := c.getVulnerabilitiesForPackages("debian", "7", pkgs)
+	result, err := c.GetVulnerabilitiesForPackages("debian", "7", pkgs)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", result.Result)
 }

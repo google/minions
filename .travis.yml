@@ -33,4 +33,3 @@ script:
   # Check for issues with the format of bazel config files.
   - buildifier -mode=check $(find . -name BUILD.bazel -type f)
   - buildifier -mode=check $(find . -name WORKSPACE -type f)
-  - buildifier -mode=check $(find . -name '*.bzl' -type f)

@@ -1,5 +1,8 @@
 # Minions
 
+[![Build Status](https://travis-ci.org/google/minions.svg?branch=master)](https://travis-ci.org/google/minions)
+
+
 ## TL;DR
 
 Minions is a filesystem-based, microservice oriented security scanner.

@@ -4,7 +4,7 @@
 
 Minions is a filesystem-based, microservice oriented security scanner.
 It supports distributed security checks and isolates testing and
-data access via gRPC, can be *easily* extended and is privacy mindful.
+data access via [gRPC](https://grpc.io), can be *easily* extended and is privacy mindful.
 
 ![High level schema of Minions](https://docs.google.com/drawings/d/e/2PACX-1vQubAAchbeeLMqjq0-uRYeMH4IFKQOoe8bYlHLtImGgidVWBD8UXWmvWyD9v6fHYxCpHs8s3OxY8HSJ/pub?w=363&amp;h=150)
 
@@ -24,7 +24,11 @@ A **Minion** proper (I know, the project is also called Minions) is the actual s
 
 Finally, the **Overlord** is the orchestrator of the infrastructure, in charge of managing incoming scan requests, routing them to Minions and so forth.
 
+## Why does this project matter
+
 Unlike traditional on-host security scanners, Minions minimizes the amount of code that needs to be executed on the target, and it's very easy to implement a new Goblin for a specific environment. All the complex logic is in the Minions, and users can maintain control of what goes where by running their own Goblin and Overlord.
+
+Minions also easily supports non-public scanners: adding a new tester using custom technology is as easy as implementing a well defined gRPC API.
 
 ### Interests
 
@@ -81,6 +85,8 @@ bazel run //go/goblins:goblins
 
 ## Developers
 
+We warmly welcome contributions, in particular of additional detectors (which are hopefully fairly easy to write once you get the hang of the APIs). Please read the [contributing](CONTRIBUTING.md) policy first.
+
 ### Build environment
 
 Minions has been developed using [Bazel](https://bazel.io), an opensource build infrastructure by Google. Bazel can compile multiple languages using a common idiom cross platform, which is a nice property to have for Minions.
@@ -93,9 +99,9 @@ The Go code also builds and runs with the native compiler. In fact, one can have
 Now, simply blaze building the gopath target:
 
 ```bash
-bazel build gopath
+bazel build //:gopath
 ````
 
-## Notice of affiliation
+## Notice of affiliation 
 
 This is *not* an official Google product.

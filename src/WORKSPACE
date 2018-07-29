@@ -20,7 +20,7 @@ git_repository(
 
 load(
     "@bazel_gazelle//:deps.bzl",
-    "go_repository"
+    "go_repository",
 )
 
 # Buildifier
@@ -43,9 +43,9 @@ git_repository(
 
 git_repository(
     name = "in_gopkg_resty_v1",
-    remote = "https://github.com/go-resty/resty",
     # tag = "v1.7.0", Update once there is a new release.
     commit = "d5d11335bfe189d4f9df3cbe153b3586d8cb2f74",
+    remote = "https://github.com/go-resty/resty",
 )
 
 go_repository(
@@ -64,7 +64,7 @@ go_repository(
     name = "com_github_necomeshi_rpmlib",
     importpath = "github.com/necomeshi/rpmlib",
     tag = "v1.0.1",
-    )
+)
 
 new_git_repository(
     name = "com_github_google_uuid",

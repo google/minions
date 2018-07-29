@@ -50,7 +50,7 @@ func newServer() (*overlord.Server, error) {
 }
 
 func main() {
-	flag.Var(&minions, "", "Addresses of minions to boot against")
+	flag.Var(&minions, "minions", "Addresses of minions to boot against")
 
 	flag.Parse()
 	fmt.Println("Starting up overlord server")

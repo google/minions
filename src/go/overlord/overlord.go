@@ -14,9 +14,12 @@
 package overlord
 
 import (
+	"log"
+
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 
+	"github.com/google/minions/go/overlord/interests"
 	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 	"golang.org/x/net/context"
@@ -36,16 +39,19 @@ func New(ctx context.Context, minionAddresses []string, opts ...grpc.DialOption)
 		initialInterests: nil,
 	}
 
+	log.Println("Reaching out to all minions.")
 	// Build map of minions.
 	for _, addr := range minionAddresses {
+		log.Printf("Contacting %s\n", addr)
 		c, err := grpc.Dial(addr, opts...)
 		if err != nil {
 			return nil, err
 		}
+		log.Println("Ok, minion connected")
 		server.minions[addr] = mpb.NewMinionClient(c)
 	}
 
-	// Init initial interests by querying each minion.
+	log.Println("Retrieving initial interests")
 	for _, m := range server.minions {
 		// TODO(paradoxengine): most likely, a deadline here?
 		intResp, err := m.ListInitialInterests(ctx, &mpb.ListInitialInterestsRequest{})
@@ -53,10 +59,13 @@ func New(ctx context.Context, minionAddresses []string, opts ...grpc.DialOption)
 			return nil, err
 		}
 		for _, i := range intResp.GetInterests() {
+			log.Printf("Got interest: %s", i)
 			server.initialInterests = append(server.initialInterests, i)
 		}
 	}
-
+	log.Printf("Minimizing interests, now %d", len(server.initialInterests))
+	server.initialInterests = interests.Minify(server.initialInterests)
+	log.Printf("Minimized interests, now %d", len(server.initialInterests))
 	return server, nil
 }
 

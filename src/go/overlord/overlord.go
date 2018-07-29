@@ -15,6 +15,7 @@ package overlord
 
 import (
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -85,11 +86,38 @@ func (s *Server) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb
 // ListInterests returns the interests for a given scan, i.e. the files or metadata
 // that have to be fed the Overlord for security scanning.
 func (s *Server) ListInterests(ctx context.Context, req *pb.ListInterestsRequest) (*pb.ListInterestsResponse, error) {
-	return &pb.ListInterestsResponse{Interests: nil, NextPageToken: "token"}, nil
+	// IMPORTANT NOTE: This is a broken implementation that always returns the initial list.
+	return &pb.ListInterestsResponse{Interests: s.initialInterests, NextPageToken: ""}, nil
 }
 
 // ScanFiles runs security scan on a set of files, assuming they were actually
 // needed by the backend minions.
 func (s *Server) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.ScanFilesResponse, error) {
-	return &pb.ScanFilesResponse{NewInterests: nil, Results: nil}, nil
+	// IMPORTANT NOTE: this is a broken implementation where we assume all data
+	// always fits in the first data chunk. This is really only built for testing.
+	var files []*mpb.File
+	for _, f := range req.GetFiles() {
+		f.GetDataChunks()
+		files = append(files, &mpb.File{
+			Metadata: f.GetMetadata(),
+			Data:     f.GetDataChunks()[0].GetData(),
+		})
+	}
+
+	var newInterests []*mpb.Interest
+	var results []*mpb.Finding
+	for _, m := range s.minions {
+		c, _ := context.WithTimeout(ctx, 60*time.Second)
+		r := &mpb.AnalyzeFilesRequest{
+			ScanId: req.GetScanId(),
+			Files:  files,
+		}
+		minionResponse, err := m.AnalyzeFiles(c, r)
+		if err != nil {
+			return nil, err
+		}
+		newInterests = append(newInterests, minionResponse.GetNewInterests()...)
+		results = append(results, minionResponse.GetFindings()...)
+	}
+	return &pb.ScanFilesResponse{NewInterests: newInterests, Results: results}, nil
 }

@@ -54,15 +54,28 @@ Minions is a set of microservices. You'll have to run at least 2 components to g
 
 Start by running the overlord, the orchestrator of the system.
 
-TODO(paradoxengine): Complete this section :-)
+The Overlord expects to be told where its minions are. Today, this is done simply by specifying as a flag the address of said minions.
+The overlord will then register with them and get ready to serve data.
+
+Assuming you have a minion running on localhost port 20001 (the default when you run one), you'd start the Overlord as follows.
+
+```bash
+  bazel build //go/overlord/runner
+  ./bazel-bin/go/overlord/runner/linux_amd64_stripped/Crunner --minions=localhost:20001
+```
 
 ### Minion
 
 You can run one or more Minions - and you can run as many replicas of a minion as you want, spreading the load.
 
-Each Minion carries its own set of flags and configs, but all need to be pointed to the Overlord, where they'll register.
+Each Minion carries its own set of flags and configs, but all need to be pointed to have the Overlord pointed at them, so they should be the first thing to start up.
 
-TODO(paradoxengine): Complete this section.
+Minion have a *runner* package that can be used to execute them. Assuming you want to run the vulners Minion, you'd use the following, which would start up the minion on localhost and port 20001.
+
+```bash
+  bazel build //go/minions/vulners/runner
+  ./bazel-bin/go/minions/vulners/runner/linux_amd64_stripped/runner
+```
 
 #### Replicas
 

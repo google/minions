@@ -11,11 +11,11 @@ go_library(
     importpath = "github.com/google/minions/go/minions/vulners",
     visibility = ["//visibility:public"],
     deps = [
+        "//go/minions:go_default_library",
         "//go/minions/vulners/dpkg:go_default_library",
         "//go/minions/vulners/rpm:go_default_library",
         "//proto/minions:go_default_library",
         "@com_github_golang_protobuf//ptypes:go_default_library_gen",
-        "@com_github_patrickmn_go-cache//:go_default_library",
         "@in_gopkg_resty_v1//:go_default_library",
         "@org_golang_x_net//context:go_default_library",
     ],
@@ -34,8 +34,8 @@ go_library(
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
     deps = [
-      "@com_github_stretchr_testify//assert:go_default_library",
-      "@com_github_stretchr_testify//require:go_default_library",
+        "@com_github_stretchr_testify//assert:go_default_library",
+        "@com_github_stretchr_testify//require:go_default_library",
     ],
 )
 
@@ -54,8 +54,8 @@ go_test(
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
     deps = [
+        "//go/minions:go_default_library",
         "//proto/minions:go_default_library",
-        "@com_github_patrickmn_go-cache//:go_default_library",
         "@com_github_stretchr_testify//assert:go_default_library",
         "@com_github_stretchr_testify//require:go_default_library",
     ],

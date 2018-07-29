@@ -22,7 +22,11 @@ additional interests to the caller as a result of an AnalyzeFiles method call.
 package minions
 
 import (
+	"fmt"
+	"time"
+
 	pb "github.com/google/minions/proto/minions"
+	"github.com/patrickmn/go-cache"
 	"golang.org/x/net/context"
 )
 
@@ -32,4 +36,49 @@ type Minion interface {
 	ListInitialInterests(ctx context.Context, req *pb.ListInitialInterestsRequest) (*pb.ListInitialInterestsResponse, error)
 	// AnalyzeFiles returns security issues found in files from AnalyzeFilesRequest.
 	AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (*pb.AnalyzeFilesResponse, error)
+}
+
+// StateManager handles state keeping for a minion, allowing it to save
+// whatever needs saving. It might or might not work across horizontally
+// scaled minions of the same type: check implementors.
+type StateManager interface {
+	// Set atomically sets the state of a minion during a scan.
+	Set(scanID string, state interface{}) error
+	// Get atomically retrieves the state of a minion during a scan.
+	// Returns an error if the key was not found.
+	Get(scanID string) (interface{}, error)
+	// Has returns true if there is any set state for the given scan.
+	Has(scanID string) bool
+}
+
+// LocalStateManager uses a local cache to manage a minion's state.
+type LocalStateManager struct {
+	lc *cache.Cache
+}
+
+// NewLocalStateManager creates a StateManager backed by a local cache.
+func NewLocalStateManager() *LocalStateManager {
+	lc := cache.New(5*time.Minute, 10*time.Minute)
+	return &LocalStateManager{lc: lc}
+}
+
+// Set atomically sets the state of a minion during a scan.
+func (l *LocalStateManager) Set(scanID string, state interface{}) error {
+	l.lc.SetDefault(scanID, state)
+	return nil
+}
+
+// Get atomically retrieves the state of a minion during a scan.
+func (l *LocalStateManager) Get(scanID string) (interface{}, error) {
+	v, found := l.lc.Get(scanID)
+	if !found {
+		return nil, fmt.Errorf("Cannot find state for scan: %s", scanID)
+	}
+	return v, nil
+}
+
+// Has returns true if there is any set state for the given scan.
+func (l *LocalStateManager) Has(scanID string) bool {
+	_, found := l.lc.Get(scanID)
+	return found
 }

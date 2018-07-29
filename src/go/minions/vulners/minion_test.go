@@ -17,10 +17,9 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
+	"github.com/google/minions/go/minions"
 	pb "github.com/google/minions/proto/minions"
-	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,7 +28,7 @@ func TestAnalyzeFiles_singleCall_returnsVulns(t *testing.T) {
 	mockedRequest := buildMockVulnClientKey("Ubuntu", "18.04", []string{"fonts-sil-abyssinica 1.500-1 all", "mokutil 0.3.0-0ubuntu5 amd64"})
 	mockResp := buildMockedAPIVulnResponse("fonts-sil-abyssinica")
 	mockClient := &mockVulnerabilityClient{responses: map[string]*VulnResponse{mockedRequest: mockResp}}
-	m := &Minion{apiClient: mockClient, tmpCache: cache.New(5*time.Second, 10*time.Second)}
+	m := &Minion{apiClient: mockClient, state: minions.NewLocalStateManager()}
 
 	// We send both files in a single call.
 	files := []*pb.File{
@@ -48,7 +47,7 @@ func TestAnalyzeFiles_osReleaseFirst_returnsVulns(t *testing.T) {
 	mockedRequest := buildMockVulnClientKey("Ubuntu", "18.04", []string{"fonts-sil-abyssinica 1.500-1 all", "mokutil 0.3.0-0ubuntu5 amd64"})
 	mockResp := buildMockedAPIVulnResponse("mokutil")
 	mockClient := &mockVulnerabilityClient{responses: map[string]*VulnResponse{mockedRequest: mockResp}}
-	m := &Minion{apiClient: mockClient, tmpCache: cache.New(5*time.Second, 10*time.Second)}
+	m := &Minion{apiClient: mockClient, state: minions.NewLocalStateManager()}
 
 	// Send first the OS release file
 	scanID := "A_SCAN_ID"
@@ -70,7 +69,7 @@ func TestAnalyzeFiles_dpkgFirst_returnsVulns(t *testing.T) {
 	mockedRequest := buildMockVulnClientKey("Ubuntu", "18.04", []string{"fonts-sil-abyssinica 1.500-1 all", "mokutil 0.3.0-0ubuntu5 amd64"})
 	mockResp := buildMockedAPIVulnResponse("mokutil")
 	mockClient := &mockVulnerabilityClient{responses: map[string]*VulnResponse{mockedRequest: mockResp}}
-	m := &Minion{apiClient: mockClient, tmpCache: cache.New(5*time.Second, 10*time.Second)}
+	m := &Minion{apiClient: mockClient, state: minions.NewLocalStateManager()}
 
 	scanID := "A_SCAN_ID"
 

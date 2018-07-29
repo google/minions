@@ -23,20 +23,18 @@ package vulners
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/minions/go/minions"
 	"github.com/google/minions/go/minions/vulners/dpkg"
 	"github.com/google/minions/go/minions/vulners/rpm"
 	pb "github.com/google/minions/proto/minions"
-	"github.com/patrickmn/go-cache"
 	"golang.org/x/net/context"
 )
 
@@ -44,7 +42,7 @@ import (
 // installed on the box.
 type Minion struct {
 	apiClient VulnerabilityClient // API client to fetch vulnerabilities
-	tmpCache  *cache.Cache
+	state     minions.StateManager
 }
 
 // VulnerabilityClient is a client to fetch vulnerability data for a set of packages
@@ -55,18 +53,17 @@ type VulnerabilityClient interface {
 
 // state represents the internal state of the minions, used to track
 // files of the same. It is always associated to a ScanID.
-type state struct {
+type mstate struct {
 	version  string
 	distro   string
 	packages []string
-	init     bool
 }
 
 // NewMinion creates a default vulners minion that connects to Vulners default
 // API endpoints. It accepts an optional apiKey parameter which specifies which
 // key to use when querying the Vulners APIs.
 func NewMinion(apiKey string) *Minion {
-	return &Minion{newClient(apiKey), cache.New(5*time.Minute, 10*time.Minute)}
+	return &Minion{newClient(apiKey), minions.NewLocalStateManager()}
 }
 
 // ListInitialInterests returns a list of files which might contain
@@ -92,8 +89,8 @@ func (m Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (
 	// TODO(paradoxengine): add decent error management
 
 	// Init with an empty state if needed.
-	if !m.hasState(req.GetScanId()) {
-		m.setState(req.GetScanId(), &state{init: true})
+	if !m.state.Has(req.GetScanId()) {
+		m.state.Set(req.GetScanId(), &mstate{})
 	}
 
 	// Main loop, builds the state and parses all incoming files.
@@ -133,12 +130,12 @@ func (m Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (
 
 	findings := []*pb.Finding{}
 
-	s, err := m.getState(req.GetScanId())
+	s, err := m.state.Get(req.GetScanId())
 	if err != nil {
 		return nil, err
 	}
 
-	if len(s.packages) > 0 {
+	if len(s.(*mstate).packages) > 0 {
 		// Let's see if we already have distro and version.
 		distro, version, err := m.getDistroVersionFromState(req.GetScanId())
 		if err != nil {
@@ -147,7 +144,7 @@ func (m Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (
 		// If the OS details have been parsed already then let's have a look at the installed stuff.
 		if distro != "" {
 			// Now send the list of packages to the vulners API to get vulns
-			response, err := m.apiClient.GetVulnerabilitiesForPackages(distro, version, s.packages)
+			response, err := m.apiClient.GetVulnerabilitiesForPackages(distro, version, s.(*mstate).packages)
 			if err != nil {
 				return nil, err
 			}
@@ -175,41 +172,21 @@ func (m *Minion) extractOsAndSetState(req *pb.AnalyzeFilesRequest, f *pb.File) e
 	if err != nil {
 		return err
 	}
-	state, err := m.getState(req.GetScanId())
+	s, err := m.state.Get(req.GetScanId())
 	if err != nil {
 		return err
 	}
-	state.version = version
-	state.distro = distro
-	return m.setState(req.GetScanId(), state)
+	s.(*mstate).version = version
+	s.(*mstate).distro = distro
+	return m.state.Set(req.GetScanId(), s)
 }
 
 func (m *Minion) getDistroVersionFromState(scanID string) (string, string, error) {
-	s, err := m.getState(scanID)
+	s, err := m.state.Get(scanID)
 	if err != nil {
 		return "", "", err
 	}
-	return s.distro, s.version, nil
-}
-
-// setState atomically sets the state of a minion during a scan.
-func (m *Minion) setState(scanID string, state *state) error {
-	m.tmpCache.Set(scanID, state, 0)
-	return nil
-}
-
-// getState atomically gets the state of a minion during a scan.
-func (m *Minion) getState(scanID string) (*state, error) {
-	s, found := m.tmpCache.Get(scanID)
-	if !found {
-		return nil, errors.New("did not find any state for this scan")
-	}
-	return s.(*state), nil
-}
-
-func (m *Minion) hasState(scanID string) bool {
-	_, found := m.tmpCache.Get(scanID)
-	return found
+	return s.(*mstate).distro, s.(*mstate).version, nil
 }
 
 // convertFinding builds an internal representation of the fining from the vulners
@@ -244,12 +221,12 @@ func convertFinding(packageName string, issues map[string][]vulnPackage, issueNa
 // the new known packages.
 func (m *Minion) getDpkgPackagesAndSetState(scanID string, df io.Reader) error {
 	pkgs, err := getDpkgPackages(df)
-	s, err := m.getState(scanID)
+	s, err := m.state.Get(scanID)
 	if err != nil {
 		return err
 	}
-	s.packages = append(s.packages, pkgs...)
-	return m.setState(scanID, s)
+	s.(*mstate).packages = append(s.(*mstate).packages, pkgs...)
+	return m.state.Set(scanID, s)
 }
 
 // Analyzes the dpkg database and returns a list of packages, versions and
@@ -275,12 +252,12 @@ func getDpkgPackages(df io.Reader) ([]string, error) {
 // the new known packages.
 func (m *Minion) getRpmPackagesAndSetState(scanID string, dbPath string) error {
 	pkgs, err := getRpmPackages(dbPath)
-	s, err := m.getState(scanID)
+	s, err := m.state.Get(scanID)
 	if err != nil {
 		return err
 	}
-	s.packages = append(s.packages, pkgs...)
-	return m.setState(scanID, s)
+	s.(*mstate).packages = append(s.(*mstate).packages, pkgs...)
+	return m.state.Set(scanID, s)
 }
 
 // Analyzes the RPM database and returns a list of packages, versions and

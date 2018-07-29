@@ -28,7 +28,7 @@ install:
 
 script:
   # Run all tests
-  - bazel clean && bazel test --test_output=errors //...
+  - cd src && bazel clean && bazel --batch test --test_output=errors //...
 
   # Check for issues with the format of bazel config files.
   - buildifier -mode=check $(find . -name BUILD.bazel -type f)

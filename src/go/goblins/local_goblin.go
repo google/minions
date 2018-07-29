@@ -103,6 +103,17 @@ func main() {
 
 	results := startScan(client)
 
-	// Print out the results.
-	log.Printf("Got these results for the scan: %s\n", results)
+	if len(results) == 0 {
+		log.Println("Scan completed but got no vulnerabilities back. Good! Maybe.")
+	}
+
+	for _, r := range results {
+		log.Println("-----------------")
+		log.Printf("%s : %s\n",
+			r.GetAdvisory().GetReference(), r.GetAdvisory().GetDescription())
+		log.Printf("Detected by %s\n", r.GetSource().GetMinion())
+		log.Printf("Resource: %s [%s]",
+			r.GetVulnerableResources()[0].GetPath(), r.GetVulnerableResources()[0].GetAdditionalInfo())
+		log.Printf("Severity: %s\n", r.GetSeverity())
+	}
 }

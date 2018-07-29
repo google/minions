@@ -16,9 +16,11 @@ package main
 import (
 	"errors"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"syscall"
 
 	minions "github.com/google/minions/proto/minions"
@@ -27,23 +29,40 @@ import (
 
 // loadFiles builds the File protos for a given interest in chunks,
 // topping at maximum size and files count. Note we do not support
-// content regexps at this point.
+// content regexps at this point (i.e. we do not check file contents).
 func loadFiles(i *minions.Interest, maxKb int, maxFiles int, root string) ([][]*pb.File, error) {
 	var paths []string
 	// Note we assume a unix filesystem here. Might want to revisit.
-	filepath.Walk(root, func(path string, f os.FileInfo, _ error) error {
+	err := filepath.Walk(root, func(path string, f os.FileInfo, e error) error {
+
+		if e != nil {
+			// If we don't have permission, skip the directory but don't bail out.
+			if strings.Contains(e.Error(), "permission denied") {
+				return filepath.SkipDir
+			}
+			if strings.Contains(e.Error(), "no such file") {
+				return filepath.SkipDir
+			}
+
+			log.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, e)
+			return e
+		}
 		// For the naive implementation, let's check every file, but really
 		// here we need to bail out early instead and return filepath.SkipDir
 		// anytime we take a wrong turn.
 		if !f.IsDir() {
 			// Let's see if we match!
-			r, err := regexp.MatchString(i.GetPathRegexp(), path)
+			r, err := regexp.MatchString("^"+i.GetPathRegexp(), path)
 			if err == nil && r {
 				paths = append(paths, path)
 			}
 		}
 		return nil
 	})
+
+	if err != nil {
+		return nil, err
+	}
 
 	var files [][]*pb.File
 	var fs []*pb.File

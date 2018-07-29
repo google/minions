@@ -42,8 +42,10 @@ func startScan(client pb.OverlordClient) {
 	log.Printf("Created scan %s", scanID)
 
 	log.Printf("Will now send files for each interests, a bit at a time")
+	sentfiles := make(map[string]int)
 	for _, i := range response.GetInterests() {
-		log.Printf("Sending over: %s", i.GetPathRegexp())
+		sentfiles[i.GetPathRegexp()] = 0
+		log.Printf("Sending over files for interest: %s", i)
 		// Send one request per interest
 		files, err := loadFiles(i, *maxKBPerReq, *maxFilesPerReq, *rootPath)
 		if err != nil {
@@ -52,8 +54,10 @@ func startScan(client pb.OverlordClient) {
 
 		for _, fs := range files {
 			for _, f := range fs {
-				log.Printf("Sending over file %s", f.Metadata.GetPath())
+				sentfiles[i.GetPathRegexp()]++
+				log.Printf("Will send over file %s", f.Metadata.GetPath())
 			}
+			log.Printf("For interest %s I will send %d files", i.GetPathRegexp(), sentfiles[i.GetPathRegexp()])
 			sfr := &pb.ScanFilesRequest{ScanId: scanID, Files: fs}
 			client.ScanFiles(ctx, sfr)
 		}

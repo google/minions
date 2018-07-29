@@ -1,0 +1,36 @@
+dist: trusty
+sudo: required
+
+os:
+  - linux
+
+jdk:
+  - oraclejdk8  # Building Bazel requires JDK8.
+
+language: go
+go: 1.10.x
+install: true
+
+services:
+  - docker
+
+addons:
+  apt:
+    sources:
+      - sourceline: 'deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8'
+        key_url: 'https://storage.googleapis.com/bazel-apt/doc/apt-key.pub.gpg'
+    packages:
+      - bazel
+      - librpm-dev
+
+install:
+  - go get -u github.com/bazelbuild/buildifier/buildifier
+
+script:
+  # Run all tests
+  - bazel clean && bazel test --test_output=errors //...
+
+  # Check for issues with the format of bazel config files.
+  - buildifier -mode=check $(find . -name BUILD.bazel -type f)
+  - buildifier -mode=check $(find . -name WORKSPACE -type f)
+  - buildifier -mode=check $(find . -name '*.bzl' -type f)

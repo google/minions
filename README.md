@@ -50,23 +50,9 @@ THe way this works in practice is that every time a Goblin sends files to an Ove
 
 Minions is a set of microservices. You'll have to run at least 2 components to get aything useful: an Overlord, and one or more Minions.
 
-### Overlord
-
-Start by running the overlord, the orchestrator of the system.
-
-The Overlord expects to be told where its minions are. Today, this is done simply by specifying as a flag the address of said minions.
-The overlord will then register with them and get ready to serve data.
-
-Assuming you have a minion running on localhost port 20001 (the default when you run one), you'd start the Overlord as follows.
-
-```bash
-  bazel build //go/overlord/runner
-  ./bazel-bin/go/overlord/runner/linux_amd64_stripped/Crunner --minions=localhost:20001
-```
-
 ### Minion
 
-You can run one or more Minions - and you can run as many replicas of a minion as you want, spreading the load.
+Start by running one or more Minions - you can run as many replicas of a minion as you want, spreading the load.
 
 Each Minion carries its own set of flags and configs, but all need to be pointed to have the Overlord pointed at them, so they should be the first thing to start up.
 
@@ -82,6 +68,20 @@ Minion have a *runner* package that can be used to execute them. Assuming you wa
 If you run more than a single replica of a minion, and if a minion keeps state, you'll want to have a shared backend.
 
 TODO(paradoxengine): explain how one can know and what to do :)
+
+### Overlord
+
+Once a minion is running, you can start the overlord, the orchestrator of the system.
+
+The Overlord expects to be told where its minions are. Today, this is done simply by specifying as a flag the address of said minions.
+The overlord will then register with them and get ready to serve data.
+
+Assuming you have a minion running on localhost port 20001 (the default when you run one), you'd start the Overlord as follows.
+
+```bash
+  bazel build //go/overlord/runner
+  ./bazel-bin/go/overlord/runner/linux_amd64_stripped/Crunner --minions=localhost:20001
+```
 
 #### Minion details: Vulners
 

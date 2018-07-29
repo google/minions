@@ -41,6 +41,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "minion_test.go",
         "osreleaseparser_test.go",

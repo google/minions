@@ -26,6 +26,7 @@ go_binary(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["common_test.go"],
     embed = [":go_default_library"],
     deps = [

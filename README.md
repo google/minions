@@ -14,6 +14,12 @@ We are actively opensourcing existing code and building new one, but the project
 
 Full roadmap [here](roadmap.md).
 
+## Why does this project matter
+
+Unlike traditional on-host security scanners, Minions minimizes the amount of code that needs to be executed on the target, and it's very easy to implement a new Goblin for a specific environment. All the complex logic is in the Minions, and users can maintain control of what goes where by running their own Goblin and Overlord.
+
+Minions (scanners) also easily supports non-public scanners: adding a new tester using custom technology is as easy as implementing a well defined gRPC API.
+
 ## Core concepts
 
 Much like ancient Gaul, a Minions infrastructure is divided in three main components: the Goblins, the Overlord and the Minions.
@@ -23,12 +29,6 @@ A **Goblin** is responsible for data access: it reads filesystem data and metada
 A **Minion** proper (I know, the project is also called Minions) is the actual scanner. It receives file data and metadata, does whatever it needs to and returns back - if any were found - vulnerabilities. A minion has only as much context as it specifically asks for about the target of a scan (more about this below). This allows Minions to be laser-focused on the tasks of detecting vulnerabilities, without all the classic overhead that comes with any, even trivial, scanner.
 
 Finally, the **Overlord** is the orchestrator of the infrastructure, in charge of managing incoming scan requests, routing them to Minions and so forth.
-
-## Why does this project matter
-
-Unlike traditional on-host security scanners, Minions minimizes the amount of code that needs to be executed on the target, and it's very easy to implement a new Goblin for a specific environment. All the complex logic is in the Minions, and users can maintain control of what goes where by running their own Goblin and Overlord.
-
-Minions also easily supports non-public scanners: adding a new tester using custom technology is as easy as implementing a well defined gRPC API.
 
 ### Interests
 

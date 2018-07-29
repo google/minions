@@ -2,7 +2,6 @@
 
 [![Build Status](https://travis-ci.org/google/minions.svg?branch=master)](https://travis-ci.org/google/minions)
 
-
 ## TL;DR
 
 Minions is a filesystem-based, microservice oriented security scanner.
@@ -105,6 +104,6 @@ Now, simply blaze building the gopath target:
 bazel build //:gopath
 ````
 
-## Notice of affiliation 
+## Notice of affiliation
 
 This is *not* an official Google product.

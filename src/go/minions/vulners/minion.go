@@ -80,7 +80,7 @@ func (m Minion) ListInitialInterests(ctx context.Context, req *pb.ListInitialInt
 func interest(name string) pb.Interest {
 	return pb.Interest{ // DPKG repo (for debian-like).
 		DataType:   pb.Interest_METADATA_AND_DATA,
-		PathRegexp: "/var/lib/dpkg/status"}
+		PathRegexp: name}
 }
 
 // AnalyzeFiles will parse package databases, extract CPEs and query the

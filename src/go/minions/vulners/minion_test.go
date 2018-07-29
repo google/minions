@@ -90,15 +90,20 @@ func TestAnalyzeFiles_dpkgFirst_returnsVulns(t *testing.T) {
 }
 
 func TestListInitialInterests(t *testing.T) {
-	m := NewMinion("irrelevant")
-	foundDpkg := false
-	interests, _ := m.ListInitialInterests(nil, nil)
-	for _, i := range interests.GetInterests() {
-		if i.GetPathRegexp() == "/var/lib/dpkg/status" {
-			foundDpkg = true
-		}
+	paths := []string{"/var/lib/dpkg/status", "/etc/os-release", "/usr/lib/os-release", "/var/lib/rpm/Packages"}
+	for _, p := range paths {
+		t.Run(p, func(t *testing.T) {
+			m := NewMinion("irrelevant")
+			foundPath := false
+			interests, _ := m.ListInitialInterests(nil, nil)
+			for _, i := range interests.GetInterests() {
+				if i.GetPathRegexp() == p {
+					foundPath = true
+				}
+			}
+			require.True(t, foundPath)
+		})
 	}
-	require.True(t, foundDpkg)
 }
 
 func buildFile(name string, path string, t *testing.T) *pb.File {

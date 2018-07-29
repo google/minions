@@ -18,6 +18,7 @@ import (
 	"log"
 	"time"
 
+	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -30,7 +31,7 @@ var (
 	rootPath       = flag.String("root_path", "/", "Root directory that we'll serve files from.")
 )
 
-func startScan(client pb.OverlordClient) {
+func startScan(client pb.OverlordClient) []*mpb.Finding {
 	log.Printf("Connecting to server")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -42,14 +43,25 @@ func startScan(client pb.OverlordClient) {
 	log.Printf("Created scan %s", scanID)
 
 	log.Printf("Will now send files for each interests, a bit at a time")
+
+	results, err := sendFiles(client, scanID, response.GetInterests())
+	if err != nil {
+		log.Fatalf("SendFiles %v", err)
+	}
+	cancel()
+	return results
+}
+
+func sendFiles(client pb.OverlordClient, scanID string, interests []*mpb.Interest) ([]*mpb.Finding, error) {
 	sentfiles := make(map[string]int)
-	for _, i := range response.GetInterests() {
+	var results []*mpb.Finding
+	for _, i := range interests {
 		sentfiles[i.GetPathRegexp()] = 0
 		log.Printf("Sending over files for interest: %s", i)
 		// Send one request per interest
 		files, err := loadFiles(i, *maxKBPerReq, *maxFilesPerReq, *rootPath)
 		if err != nil {
-			log.Fatalf("Failure while loading files. %v", err)
+			return nil, err
 		}
 
 		for _, fs := range files {
@@ -59,9 +71,25 @@ func startScan(client pb.OverlordClient) {
 			}
 			log.Printf("For interest %s I will send %d files", i.GetPathRegexp(), sentfiles[i.GetPathRegexp()])
 			sfr := &pb.ScanFilesRequest{ScanId: scanID, Files: fs}
-			client.ScanFiles(ctx, sfr)
+			ctx, _ := context.WithTimeout(context.Background(), 60*time.Second)
+			resp, err := client.ScanFiles(ctx, sfr)
+			log.Printf("Files sent. Response: %v", resp)
+			if err != nil {
+				return nil, err
+			}
+			// Iterate on new interests
+			if len(resp.GetNewInterests()) > 0 {
+				log.Printf("Got new interests!")
+				r, err := sendFiles(client, scanID, resp.GetNewInterests())
+				if err != nil {
+					return nil, err
+				}
+				results = append(results, r...)
+			}
+			results = append(results, resp.GetResults()...)
 		}
 	}
+	return results, nil
 }
 
 func main() {
@@ -73,5 +101,8 @@ func main() {
 	defer conn.Close()
 	client := pb.NewOverlordClient(conn)
 
-	startScan(client)
+	results := startScan(client)
+
+	// Print out the results.
+	log.Printf("Got these results for the scan: %s\n", results)
 }

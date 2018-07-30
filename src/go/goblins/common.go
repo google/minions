@@ -23,15 +23,19 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/google/minions/go/overlord/interests"
 	minions "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 )
 
-// loadFiles builds the File protos for a given interest in chunks,
+// loadFiles builds the File protos for a slice of interests in chunks,
 // topping at maximum size and files count. Note we do not support
 // content regexps at this point (i.e. we do not check file contents).
-func loadFiles(i *minions.Interest, maxKb int, maxFiles int, root string) ([][]*pb.File, error) {
-	var paths []string
+func loadFiles(intrs []*minions.Interest, maxKb int, maxFiles int, root string) ([][]*pb.File, error) {
+	// Defensively minify the interests: this should have already happened but better safe than sorry.
+	intrs = interests.Minify(intrs)
+
+	paths := make(map[string]minions.Interest_DataType)
 	// Note we assume a unix filesystem here. Might want to revisit.
 	err := filepath.Walk(root, func(path string, f os.FileInfo, e error) error {
 
@@ -51,10 +55,14 @@ func loadFiles(i *minions.Interest, maxKb int, maxFiles int, root string) ([][]*
 		// here we need to bail out early instead and return filepath.SkipDir
 		// anytime we take a wrong turn.
 		if !f.IsDir() {
-			// Let's see if we match!
-			r, err := regexp.MatchString("^"+i.GetPathRegexp(), path)
-			if err == nil && r {
-				paths = append(paths, path)
+			// Let's see if we match any interest!
+			for _, i := range intrs {
+				r, err := regexp.MatchString("^"+i.GetPathRegexp(), path)
+				if err == nil && r {
+					// NOTE: this overwrites existing datatypes, under the assumption that the
+					// minification has taken care of this.
+					paths[path] = i.GetDataType()
+				}
 			}
 		}
 		return nil
@@ -66,17 +74,17 @@ func loadFiles(i *minions.Interest, maxKb int, maxFiles int, root string) ([][]*
 
 	var files [][]*pb.File
 	var fs []*pb.File
-	for _, p := range paths {
-		metadata, err := getMetadata(p)
+	for path, dataType := range paths {
+		metadata, err := getMetadata(path)
 		if err != nil {
 			return nil, err
 		}
 		f := &pb.File{Metadata: metadata, DataChunks: nil}
-		switch dataType := i.GetDataType(); dataType {
+		switch dataType {
 		case minions.Interest_METADATA:
 			break
 		case minions.Interest_METADATA_AND_DATA:
-			chunks, err := getDataChunks(p)
+			chunks, err := getDataChunks(path)
 			if err != nil {
 				return nil, err
 			}

@@ -53,41 +53,33 @@ func startScan(client pb.OverlordClient) []*mpb.Finding {
 }
 
 func sendFiles(client pb.OverlordClient, scanID string, interests []*mpb.Interest) ([]*mpb.Finding, error) {
-	sentfiles := make(map[string]int)
 	var results []*mpb.Finding
-	for _, i := range interests {
-		sentfiles[i.GetPathRegexp()] = 0
-		log.Printf("Sending over files for interest: %s", i)
-		// Send one request per interest
-		files, err := loadFiles(i, *maxKBPerReq, *maxFilesPerReq, *rootPath)
+	files, err := loadFiles(interests, *maxKBPerReq, *maxFilesPerReq, *rootPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fs := range files {
+		for _, ff := range fs {
+			log.Printf("Sending file %s", ff.GetMetadata().GetPath())
+		}
+		sfr := &pb.ScanFilesRequest{ScanId: scanID, Files: fs}
+		ctx, _ := context.WithTimeout(context.Background(), 60*time.Second)
+		resp, err := client.ScanFiles(ctx, sfr)
+		log.Printf("Files sent. Response: %v", resp)
 		if err != nil {
 			return nil, err
 		}
-
-		for _, fs := range files {
-			for _, f := range fs {
-				sentfiles[i.GetPathRegexp()]++
-				log.Printf("Will send over file %s", f.Metadata.GetPath())
-			}
-			log.Printf("For interest %s I will send %d files", i.GetPathRegexp(), sentfiles[i.GetPathRegexp()])
-			sfr := &pb.ScanFilesRequest{ScanId: scanID, Files: fs}
-			ctx, _ := context.WithTimeout(context.Background(), 60*time.Second)
-			resp, err := client.ScanFiles(ctx, sfr)
-			log.Printf("Files sent. Response: %v", resp)
+		// Iterate on new interests
+		if len(resp.GetNewInterests()) > 0 {
+			log.Printf("Got new interests!")
+			r, err := sendFiles(client, scanID, resp.GetNewInterests())
 			if err != nil {
 				return nil, err
 			}
-			// Iterate on new interests
-			if len(resp.GetNewInterests()) > 0 {
-				log.Printf("Got new interests!")
-				r, err := sendFiles(client, scanID, resp.GetNewInterests())
-				if err != nil {
-					return nil, err
-				}
-				results = append(results, r...)
-			}
-			results = append(results, resp.GetResults()...)
+			results = append(results, r...)
 		}
+		results = append(results, resp.GetResults()...)
 	}
 	return results, nil
 }

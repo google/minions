@@ -74,6 +74,7 @@ func loadFiles(intrs []*minions.Interest, maxKb int, maxFiles int, root string) 
 
 	var files [][]*pb.File
 	var fs []*pb.File
+	// TODO(paradoxengine): implement limits on count of files and size.
 	for path, dataType := range paths {
 		metadata, err := getMetadata(path)
 		if err != nil {

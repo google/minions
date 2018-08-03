@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -53,16 +54,58 @@ func NewClient(apiKey string) *Client {
 	return &Client{baseURL: url, apiKey: apiKey, limiter: limiter}
 }
 
+// setNewLimitIfNeeded looks at the response headers from vulners and, if needed
+// defines new rate limits. This function has side effects on the limiter.
+func (c *Client) setNewLimitIfNeeded(response *resty.Response) error {
+
+	// Now check to see if the Vulners backend tells us to slow down.
+	limitS := response.Header().Get("X-Vulners-Ratelimit-Reqlimit")
+	currRateS := response.Header().Get("X-Vulners-Ratelimit-Rate")
+	if currRateS != "" {
+		currRate, err := strconv.ParseFloat(currRateS, 64)
+		if err != nil {
+			return fmt.Errorf("Cannot parse X-Vulners-Ratelimit-Rate header: %s", currRateS)
+		}
+		limit, err := strconv.ParseFloat(limitS, 64)
+		if err != nil {
+			return fmt.Errorf("Cannot parse X-Vulners-Ratelimit-Reqlimit header: %s", limitS)
+		}
+
+		newLimit := rate.Limit(limit)
+		// Check if we need to slow down and do so if needed, or raise the limit if possible.
+		if currRate > limit {
+			// Shoot for 80% of the limit, trying to be nice.
+			actualLimit := limit * 80 / 100
+			// Now very, very slowly ramp up the amount of requests similar to what
+			// the Vulners Python APIs do.
+			rateDifference := (currRate / (actualLimit / 100)) / 60
+			newLimit = rate.Limit((rateDifference * actualLimit) / 100.0)
+		}
+		fmt.Printf("Ok, setting limit %f \n", newLimit)
+		c.limiter.SetLimit(newLimit)
+	}
+	return nil
+}
+
 // GetVulnerabilitiesForCpe returns all known vulnerabilities from Vulners for the
 // given CPE, erroring out if there are more than maxVulnerabilities. Yes, that's
 // not a very reasonable behavior, so just specify something large and a future
 // version of this client might implement some form of client-side paging.
 func (c *Client) GetVulnerabilitiesForCpe(ctx context.Context, cpe string, maxVulnerabilities int) (result string, err error) {
 	c.limiter.Wait(ctx)
-	return c.getVulnerabilitiesForCpe(cpe, maxVulnerabilities)
+	r, err := c.getVulnerabilitiesForCpe(cpe, maxVulnerabilities)
+	if err != nil {
+		return "", err
+	}
+	err = c.setNewLimitIfNeeded(r)
+	if err != nil {
+		return "", err
+	}
+
+	return r.String(), nil
 }
 
-func (c *Client) getVulnerabilitiesForCpe(cpe string, maxVulnerabilities int) (result string, err error) {
+func (c *Client) getVulnerabilitiesForCpe(cpe string, maxVulnerabilities int) (result *resty.Response, err error) {
 	type getCpeVulnMessage struct {
 		Software           string `json:"software"`
 		Version            string `json:"version"`
@@ -74,10 +117,10 @@ func (c *Client) getVulnerabilitiesForCpe(cpe string, maxVulnerabilities int) (r
 	// Note that the APIs default behavior is to error out (402 - "Too much results") if
 	// there are more than maxVulnerabilities. Sigh.
 	if maxVulnerabilities < 0 {
-		return "", errors.New("Specify positive max vulnerabilities (use a large number if in doubt)")
+		return nil, errors.New("Specify positive max vulnerabilities (use a large number if in doubt)")
 	}
 	if len(strings.Split(cpe, ":")) <= 4 {
-		return "", ErrCpeFormat
+		return nil, ErrCpeFormat
 	}
 	slicedCpe := strings.Split(cpe, ":")
 	version := slicedCpe[4]
@@ -97,7 +140,7 @@ func (c *Client) getVulnerabilitiesForCpe(cpe string, maxVulnerabilities int) (r
 		SetBody(json).
 		Post(fmt.Sprintf("%s/burp/software", c.baseURL.String()))
 
-	return resp.String(), nil
+	return resp, nil
 }
 
 // Useful data types for the audit calls below
@@ -137,12 +180,25 @@ type VulnResponse struct {
 
 // GetVulnerabilitiesForPackages returns all known vulnerabilities from Vulners for the
 // combination of operating system, package and version.
-func (c *Client) GetVulnerabilitiesForPackages(ctx context.Context, os string, osVersion string, packages []string) (result *VulnResponse, err error) {
+func (c *Client) GetVulnerabilitiesForPackages(ctx context.Context, os string, osVersion string, packages []string) (*VulnResponse, error) {
 	c.limiter.Wait(ctx)
-	return c.getVulnerabilitiesForPackages(os, osVersion, packages)
+	resp, err := c.getVulnerabilitiesForPackages(os, osVersion, packages)
+	if err != nil {
+		return nil, err
+	}
+	err = c.setNewLimitIfNeeded(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	r := resp.Result().(*VulnResponse)
+	if r.Result == "ERROR" {
+		return nil, errors.New("ERROR response from API backend: " + r.Data.Error)
+	}
+	return r, nil
 }
 
-func (c *Client) getVulnerabilitiesForPackages(os string, osVersion string, packages []string) (result *VulnResponse, err error) {
+func (c *Client) getVulnerabilitiesForPackages(os string, osVersion string, packages []string) (*resty.Response, error) {
 	type getVulnForPkg struct {
 		OS      string   `json:"os"`
 		Version string   `json:"version"`
@@ -171,10 +227,5 @@ func (c *Client) getVulnerabilitiesForPackages(os string, osVersion string, pack
 	if err != nil {
 		return nil, err
 	}
-	r := resp.Result().(*VulnResponse)
-	if r.Result == "ERROR" {
-		return nil, errors.New("ERROR response from API backend: " + r.Data.Error)
-	}
-
-	return r, nil
+	return resp, nil
 }

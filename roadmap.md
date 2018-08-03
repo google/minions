@@ -10,7 +10,7 @@ Once we hit Version 0.4 we'll likely do some large-scale testing on public repos
 
 First working version of Minions with the basic e2e workflow.
 
-- [ ] Local goblin with local FS access.
+- [x] Local goblin with local FS access.
 - [ ] Full Overlord implementation (data chunks reassembly,
       routing to Minions)
 - [ ] 3 Minions, of which at least 1 with state keeping.

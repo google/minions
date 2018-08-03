@@ -21,6 +21,8 @@ import (
 	"net/url"
 	"testing"
 
+	"golang.org/x/net/context"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,11 +30,11 @@ func TestGetVulnerabilitiesForCpe(t *testing.T) {
 	ts := createCpeServer(t)
 	defer ts.Close()
 
-	c := newClient("irrelevant")
+	c := NewClient("irrelevant")
 	url, _ := url.Parse(ts.URL)
 	c.baseURL = url
 
-	results, err := c.getVulnerabilitiesForCpe("cpe:/a:cybozu:garoon:4.2.1", 1)
+	results, err := c.GetVulnerabilitiesForCpe(context.Background(), "cpe:/a:cybozu:garoon:4.2.1", 1)
 	assert.Nil(t, err)
 	var dat map[string]interface{}
 	if err := json.Unmarshal([]byte(results), &dat); err != nil {
@@ -45,24 +47,24 @@ func TestGetVulnerabilitiesForPackages(t *testing.T) {
 	ts := createPkgServer(t)
 	defer ts.Close()
 
-	c := newClient("irrelevant")
+	c := NewClient("irrelevant")
 	url, _ := url.Parse(ts.URL)
 	c.baseURL = url
 
 	pkgs := []string{"pcre-8.32-15.el7.x86_64"}
-	result, err := c.GetVulnerabilitiesForPackages("debian", "7", pkgs)
+	result, err := c.GetVulnerabilitiesForPackages(context.Background(), "debian", "7", pkgs)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", result.Result)
 }
 
 func TestInvalidCpeString(t *testing.T) {
-	c := newClient("irrelevant")
+	c := NewClient("irrelevant")
 	_, err := c.getVulnerabilitiesForCpe("totallynotcpe", 1)
 	assert.Equal(t, ErrCpeFormat, err)
 }
 
 func TestNegativeMaxVulns(t *testing.T) {
-	c := newClient("irrelevant")
+	c := NewClient("irrelevant")
 	_, err := c.getVulnerabilitiesForCpe("cpe:/a:cybozu:garoon:4.2.1", -1)
 	assert.Error(t, err)
 }

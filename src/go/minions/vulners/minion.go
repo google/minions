@@ -48,7 +48,7 @@ type Minion struct {
 // VulnerabilityClient is a client to fetch vulnerability data for a set of packages
 // given an operating system and version
 type VulnerabilityClient interface {
-	GetVulnerabilitiesForPackages(string, string, []string) (*VulnResponse, error)
+	GetVulnerabilitiesForPackages(context.Context, string, string, []string) (*VulnResponse, error)
 }
 
 // state represents the internal state of the minions, used to track
@@ -63,7 +63,7 @@ type mstate struct {
 // API endpoints. It accepts an optional apiKey parameter which specifies which
 // key to use when querying the Vulners APIs.
 func NewMinion(apiKey string) *Minion {
-	return &Minion{newClient(apiKey), minions.NewLocalStateManager()}
+	return &Minion{NewClient(apiKey), minions.NewLocalStateManager()}
 }
 
 // ListInitialInterests returns a list of files which might contain
@@ -144,7 +144,7 @@ func (m Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (
 		// If the OS details have been parsed already then let's have a look at the installed stuff.
 		if distro != "" {
 			// Now send the list of packages to the vulners API to get vulns
-			response, err := m.apiClient.GetVulnerabilitiesForPackages(distro, version, s.(*mstate).packages)
+			response, err := m.apiClient.GetVulnerabilitiesForPackages(ctx, distro, version, s.(*mstate).packages)
 			if err != nil {
 				return nil, err
 			}

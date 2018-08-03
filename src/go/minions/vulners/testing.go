@@ -16,6 +16,8 @@ package vulners
 import (
 	"fmt"
 	"strings"
+
+	"golang.org/x/net/context"
 )
 
 type mockVulnerabilityClient struct {
@@ -24,7 +26,7 @@ type mockVulnerabilityClient struct {
 	responses map[string]*VulnResponse
 }
 
-func (m *mockVulnerabilityClient) GetVulnerabilitiesForPackages(version string, os string, packages []string) (*VulnResponse, error) {
+func (m *mockVulnerabilityClient) GetVulnerabilitiesForPackages(ctx context.Context, version string, os string, packages []string) (*VulnResponse, error) {
 	key := buildMockVulnClientKey(version, os, packages)
 	resp, found := m.responses[key]
 	if !found {

@@ -66,6 +66,12 @@ go_repository(
     tag = "v1.0.1",
 )
 
+go_repository(
+    name = "org_golang_x_time",
+    commit = "fbb02b2291d28baffd63558aa44b4b56f178d650",  # Current as of Aug 2018
+    importpath = "golang.org/x/time",
+)
+
 new_git_repository(
     name = "com_github_google_uuid",
     build_file_content = """

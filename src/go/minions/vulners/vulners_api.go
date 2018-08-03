@@ -20,6 +20,8 @@ import (
 	"net/url"
 	"strings"
 
+	"golang.org/x/net/context"
+	"golang.org/x/time/rate"
 	resty "gopkg.in/resty.v1"
 )
 
@@ -32,19 +34,34 @@ var (
 type Client struct {
 	baseURL *url.URL
 	apiKey  string
+	limiter *rate.Limiter
 }
 
-// newClient creates a new Client with the default baseURL
-func newClient(apiKey string) *Client {
+// NewClient creates a new Client with the default baseURL, the specified
+// API key and a default rate limiter, which only allows a few concurrent
+// requests: limits are higher if an API key is provided.
+func NewClient(apiKey string) *Client {
 	var url *url.URL
 	url, _ = url.Parse("https://vulners.com/api/v3")
-	return &Client{baseURL: url, apiKey: apiKey}
+	// If we have an API key, we can go a bit faster.
+	var limiter *rate.Limiter
+	if apiKey != "" {
+		limiter = rate.NewLimiter(10, 20)
+	} else {
+		limiter = rate.NewLimiter(5, 10)
+	}
+	return &Client{baseURL: url, apiKey: apiKey, limiter: limiter}
 }
 
-// getVulnerabilitiesForCpe returns all known vulnerabilities from Vulners for the
+// GetVulnerabilitiesForCpe returns all known vulnerabilities from Vulners for the
 // given CPE, erroring out if there are more than maxVulnerabilities. Yes, that's
 // not a very reasonable behavior, so just specify something large and a future
 // version of this client might implement some form of client-side paging.
+func (c *Client) GetVulnerabilitiesForCpe(ctx context.Context, cpe string, maxVulnerabilities int) (result string, err error) {
+	c.limiter.Wait(ctx)
+	return c.getVulnerabilitiesForCpe(cpe, maxVulnerabilities)
+}
+
 func (c *Client) getVulnerabilitiesForCpe(cpe string, maxVulnerabilities int) (result string, err error) {
 	type getCpeVulnMessage struct {
 		Software           string `json:"software"`
@@ -120,7 +137,12 @@ type VulnResponse struct {
 
 // GetVulnerabilitiesForPackages returns all known vulnerabilities from Vulners for the
 // combination of operating system, package and version.
-func (c *Client) GetVulnerabilitiesForPackages(os string, osVersion string, packages []string) (result *VulnResponse, err error) {
+func (c *Client) GetVulnerabilitiesForPackages(ctx context.Context, os string, osVersion string, packages []string) (result *VulnResponse, err error) {
+	c.limiter.Wait(ctx)
+	return c.getVulnerabilitiesForPackages(os, osVersion, packages)
+}
+
+func (c *Client) getVulnerabilitiesForPackages(os string, osVersion string, packages []string) (result *VulnResponse, err error) {
 	type getVulnForPkg struct {
 		OS      string   `json:"os"`
 		Version string   `json:"version"`

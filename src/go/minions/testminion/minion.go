@@ -31,9 +31,8 @@ type Minion struct {
 	wantsVuln bool
 }
 
-// NewMinion creates a default vulners minion that connects to Vulners default
-// API endpoints. It accepts an optional apiKey parameter which specifies which
-// key to use when querying the Vulners APIs.
+// NewMinion creates a default test minion that returns a vuln or nothing based
+// on the wantsVuln parameter, and announces Interests based on a set of paths.
 func NewMinion(paths []string, wantsVuln bool) *Minion {
 	return &Minion{paths, wantsVuln}
 }

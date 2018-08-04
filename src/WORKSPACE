@@ -72,6 +72,12 @@ go_repository(
     importpath = "golang.org/x/time",
 )
 
+go_repository(
+    name = "com_github_phayes_permbits",
+    commit = "529f712b661aa1075f21a3d7380f3a998556c1a2",  # Current as of Aug 2018
+    importpath = "github.com/phayes/permbits",
+)
+
 new_git_repository(
     name = "com_github_google_uuid",
     build_file_content = """

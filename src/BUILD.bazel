@@ -22,6 +22,7 @@ go_path(
     deps = [
         "//go/goblins:go_default_library",
         "//go/minions:go_default_library",
+        "//go/minions/redis:go_default_library",
         "//go/minions/vulners:go_default_library",
         "//go/minions/vulners:go_tests_library",
         "//go/minions/vulners/dpkg:go_default_library",

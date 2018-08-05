@@ -41,6 +41,7 @@ func TestAnalyzeFiles_singleCall_returnsVulns(t *testing.T) {
 	require.NoError(t, err)
 	packageSource := res.GetFindings()[0].GetVulnerableResources()[0].GetAdditionalInfo()
 	require.Equal(t, "fonts-sil-abyssinica", packageSource)
+	require.Equal(t, pb.Finding_SEVERITY_MEDIUM, res.GetFindings()[0].GetSeverity())
 }
 
 func TestAnalyzeFiles_osReleaseFirst_returnsVulns(t *testing.T) {

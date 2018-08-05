@@ -44,7 +44,14 @@ func buildMockVulnClientKey(version string, os string, packages []string) string
 func buildMockedAPIVulnResponse(pkg string) *VulnResponse {
 	pkgs := make(map[string]map[string][]vulnPackage)
 	advisories := make(map[string][]vulnPackage)
-	advisories["ADVISORY"] = []vulnPackage{vulnPackage{Package: pkg}}
+
+	cvss := cvssScore{Score: 4}
+	advisories["ADVISORY"] = []vulnPackage{
+		vulnPackage{
+			Cvss:    cvss,
+			Package: pkg,
+		},
+	}
 	pkgs[pkg] = advisories
 	data := vulnResponseData{Packages: pkgs}
 	return &VulnResponse{Result: "ok", Data: data}

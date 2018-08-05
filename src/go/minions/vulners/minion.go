@@ -207,12 +207,23 @@ func convertFinding(packageName string, issues map[string][]vulnPackage, issueNa
 		Path:           "",
 		AdditionalInfo: packageName,
 	}}
+	var severity pb.Finding_Severity
+	score := issueDetails[0].Cvss.Score
+	if score <= 3 {
+		severity = pb.Finding_SEVERITY_LOW
+	} else if score > 3 && score <= 5 {
+		severity = pb.Finding_SEVERITY_MEDIUM
+	} else if score > 5 && score <= 9 {
+		severity = pb.Finding_SEVERITY_HIGH
+	} else if score > 9 {
+		severity = pb.Finding_SEVERITY_CRITICAL
+	}
 	newFind := &pb.Finding{
 		Advisory:            adv,
 		VulnerableResources: resources,
 		Source:              source,
 		Accuracy:            pb.Finding_ACCURACY_AVERAGE, // Current trust level in vulners, may be adjusted based on distro in the future
-		Severity:            pb.Finding_SEVERITY_UNKNOWN, // TODO(claudio): convert CVSS into severity
+		Severity:            severity,
 	}
 	return newFind
 }

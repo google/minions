@@ -14,8 +14,8 @@ First working version of Minions with the basic e2e workflow.
 - [ ] Full Overlord implementation (data chunks reassembly,
       routing to Minions)
 - [ ] 3 Minions, of which at least 1 with state keeping.
-- [ ] Minions and Overlord have clear runners
-- [ ] Clear step by step "how to run it" instructions.
+- [x] Minions and Overlord have clear runners
+- [x] Clear step by step "how to run it" instructions.
 
 ## Version 0.2
 

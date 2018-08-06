@@ -22,6 +22,23 @@ Unlike traditional on-host security scanners, Minions minimizes the amount of co
 
 Minions (scanners) also easily supports non-public scanners: adding a new tester using custom technology is as easy as implementing a well defined gRPC API.
 
+Minions is not thought to be a full end to end solution on its own: there is no fancy UI, nor dashboards. It will,
+however, generate accurate findings that you can ingest in any other system, quickly and at scale. It's likely most
+useful if you run a large infrastructure.
+
+## Getting started
+
+You can try the project by running everything on your local box.
+
+1. Install the latest version of [bazel](https://bazel.io). There are handy packages for most platforms.
+1. Check out the project.
+1. Run the backend scanning services locally via the execute_local.sh bash script.
+1. Scan your local machine by running, in the src directory
+
+```bash
+bazel run //go/goblins -- --overlord_addr=localhost:10001
+```
+
 ## Core concepts
 
 Much like ancient Gaul, a Minions infrastructure is divided in three main components: the Goblins, the Overlord and the Minions.
@@ -82,6 +99,8 @@ Assuming you have a minion running on localhost port 20001 (the default when you
   bazel build //go/overlord/runner
   ./bazel-bin/go/overlord/runner/linux_amd64_stripped/Crunner --minions=localhost:20001
 ```
+
+If you have more minions, just add more --minions flags.
 
 #### Minion details: Vulners
 

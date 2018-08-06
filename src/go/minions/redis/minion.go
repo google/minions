@@ -25,6 +25,7 @@ import (
 	"bufio"
 	"bytes"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
@@ -82,8 +83,13 @@ func (m Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (
 			if !strings.HasPrefix(line, "#") {
 				if strings.HasPrefix(line, "bind") {
 					bindClauseFound = true
-					for _, ip := range strings.Split(line, " ")[1:] {
-						if !strings.HasPrefix(ip, "127.") || !strings.HasPrefix(ip, "1::") {
+					for _, ip := range strings.Fields(line)[1:] {
+						isLocalhost, err := regexp.MatchString(
+							"^localhost$|^127(?:\\.[0-9]+){0,2}\\.[0-9]+$|^(?:0*\\:)*?:?0*1$", ip)
+						if err != nil {
+							return nil, err
+						}
+						if !isLocalhost {
 							boundOutsideLocalhost = true
 						}
 					}
@@ -103,7 +109,8 @@ func (m Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (
 					// Check if protectedModeDisabled. Given that this has been around since
 					// version 3.2, which is somewhere in 2016, it's fair to expect the
 					// feature to be there (and enabled by default).
-					if tk := strings.Split(line, " "); len(tk) > 1 && tk[1] == "no" {
+					tk := strings.Fields(line)
+					if len(tk) > 1 && tk[1] == "no" {
 						protectedModeDisabled = true
 					}
 				}

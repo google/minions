@@ -54,6 +54,16 @@ func TestAnalyzeFiles_networkBindWithPassword_returnsNoVuln(t *testing.T) {
 	require.Empty(t, res.GetFindings())
 }
 
+func TestAnalyzeFiles_networkBindOnLocalhostAndSafeModelDisabled_returnsNoVuln(t *testing.T) {
+	m := &Minion{}
+	files := []*pb.File{buildFile("/etc/redis/redis.conf", "/testdata/redis.6.conf", t)}
+
+	req := &pb.AnalyzeFilesRequest{ScanId: "irrelevant_scan_id", Files: files}
+	res, err := m.AnalyzeFiles(nil, req)
+	require.NoError(t, err)
+	require.Empty(t, res.GetFindings())
+}
+
 func TestAnalyzeFiles_networkBindWithPasswordAndSpaces_returnsNoVuln(t *testing.T) {
 	m := &Minion{}
 	files := []*pb.File{buildFile("/etc/redis/redis.conf", "/testdata/redis.5.conf", t)}

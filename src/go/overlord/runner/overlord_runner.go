@@ -53,7 +53,7 @@ func main() {
 	flag.Var(&minions, "minions", "Addresses of minions to boot against")
 
 	flag.Parse()
-	fmt.Println("Starting up overlord server")
+	fmt.Printf("Starting up overlord server. Got these minion addresses: %s \n", minions)
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)

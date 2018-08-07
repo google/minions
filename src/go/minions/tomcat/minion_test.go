@@ -11,11 +11,15 @@
 //  See the License for the specific language governing permissions and
 //	limitations under the License.
 
-
 package tomcat
 
 import (
+	"context"
 	"testing"
+
+	"github.com/golang/protobuf/proto"
+	pb "github.com/google/minions/proto/minions"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInitialInterests(t *testing.T) {
@@ -30,9 +34,7 @@ func TestInitialInterests(t *testing.T) {
 		},
 	}
 	have, err := minion.ListInitialInterests(ctx, &pb.ListInitialInterestsRequest{})
-	if err != nil {
-		t.Fatalf("ListInitialInterests returned unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 	if !proto.Equal(have, want) {
 		t.Errorf("ListInitialInterests = %v, want %v", have, want)
 	}
@@ -188,13 +190,8 @@ func TestReturningFindings(t *testing.T) {
 	}
 
 	have, err := minion.AnalyzeFiles(ctx, testCase)
-	if err != nil {
-		t.Fatalf("AnalyzeFiles: %v", err)
-	}
-
-	if len(have.GetFindings()) != 2 {
-		t.Fatalf("AnalyzeFiles(%v) = %v, expected 2 findings with tomcat_weak_manager_credentials Advisories", testCase, have)
-	}
+	require.NoError(t, err)
+	require.Len(t, have.GetFindings(), 2)
 
 	for _, f := range have.GetFindings() {
 		if want := "tomcat_weak_manager_credentials"; f.GetAdvisory().Reference != want {

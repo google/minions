@@ -11,22 +11,25 @@
 //  See the License for the specific language governing permissions and
 //	limitations under the License.
 
-
 // Package tomcat is a minion which is looking for vulnerabilities in tomcat
 // configuration files.
 package tomcat
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/golang/protobuf/ptypes"
+	pb "github.com/google/minions/proto/minions"
 )
 
 // Advisories that are used by the tomcat Minion.
 var (
-	DefaultCredentials = &fpb.Advisory{
+	DefaultCredentials = &pb.Advisory{
 		Reference:      "tomcat_weak_manager_credentials",
 		Description:    "A user with access to the Tomcat manager has defaults credentials.",
 		Recommendation: "Change the password for this user.",
@@ -112,7 +115,7 @@ func (m *Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) 
 			}
 			ts := ptypes.TimestampNow()
 			for _, f := range findings {
-				f.Source = &fpb.Source{
+				f.Source = &pb.Source{
 					ScanId:        req.ScanId,
 					Minion:        "tomcat",
 					DetectionTime: ts,
@@ -165,7 +168,7 @@ type tomcatUsers struct {
 
 // checkUsers parses the file defining the credentials and returns a Finding for
 // each user having access to manager and using default credentials.
-func checkUsers(ctx context.Context, file *pb.File) ([]*fpb.Finding, error) {
+func checkUsers(ctx context.Context, file *pb.File) ([]*pb.Finding, error) {
 	var (
 		defaultCredentials = []struct {
 			username string
@@ -186,7 +189,7 @@ func checkUsers(ctx context.Context, file *pb.File) ([]*fpb.Finding, error) {
 			{"role1", "tomcat"},
 		}
 
-		findings []*fpb.Finding
+		findings []*pb.Finding
 		document = &tomcatUsers{}
 	)
 
@@ -207,12 +210,12 @@ func checkUsers(ctx context.Context, file *pb.File) ([]*fpb.Finding, error) {
 	for _, user := range document.Users {
 		for _, cred := range defaultCredentials {
 			if cred.username == user.Name && cred.password == user.Password && isManager(user) {
-				findings = append(findings, &fpb.Finding{
-					Accuracy: fpb.Finding_ACCURACY_FIRM,
-					Severity: fpb.Finding_SEVERITY_HIGH,
+				findings = append(findings, &pb.Finding{
+					Accuracy: pb.Finding_ACCURACY_FIRM,
+					Severity: pb.Finding_SEVERITY_HIGH,
 					Advisory: DefaultCredentials,
-					VulnerableResources: []*fpb.Resource{
-						&fpb.Resource{
+					VulnerableResources: []*pb.Resource{
+						&pb.Resource{
 							Path:           file.GetMetadata().Path,
 							AdditionalInfo: fmt.Sprintf("user %q", user.Name),
 						},

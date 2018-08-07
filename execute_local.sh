@@ -7,7 +7,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # Add to this list to start more minions.
-minions=( "redis" "vulners" )
+minions=( "passwd" "redis" "tomcat" "vulners" )
 # Port to run the overlord on
 overlord_port=10001
 

@@ -12,7 +12,7 @@
 //	limitations under the License.
 
 /*
-Package passwdfile implements a minion that looks for simple issues within
+Package passwd implements a minion that looks for simple issues within
 /etc/passwd and /etc/shadow files.
 
 It contains functions that allow one to check if users can login without
@@ -20,49 +20,53 @@ passwords, use weak hashes or are not root, but their uid is 0.
 
 It also checks whether those files have insecure UNIX permissions.
 */
-package passwdfile
+package passwd
 
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/golang/protobuf/ptypes"
+	pb "github.com/google/minions/proto/minions"
 )
 
 // Advisories that are used by the passwdfile Minion.
 var (
-	PasswdPermissions = &fpb.Advisory{
+	PasswdPermissions = &pb.Advisory{
 		Reference:      "passwd_permissions",
 		Description:    "/etc/passwd file has permissions that are too wide.",
 		Recommendation: "Change the permissions of /etc/passwd to 0644.",
 	}
-	PasswdEmptyHash = &fpb.Advisory{
+	PasswdEmptyHash = &pb.Advisory{
 		Reference:      "passwd_empty_hash",
 		Description:    "User has an empty password",
 		Recommendation: "Set up a password for the user",
 	}
-	PasswdWeakHashType = &fpb.Advisory{
+	PasswdWeakHashType = &pb.Advisory{
 		Reference:      "passwd_weak_hash_type",
 		Description:    "User uses weak hash function for the hash of his password.",
 		Recommendation: "Change the hash function to SHA512.",
 	}
-	PasswdBackdoor = &fpb.Advisory{
+	PasswdBackdoor = &pb.Advisory{
 		Reference:   "passwd_backdoor",
 		Description: "A user which is not root has uid 0.",
 	}
-	ShadowPermissions = &fpb.Advisory{
+	ShadowPermissions = &pb.Advisory{
 		Reference:      "shadow_permissions",
 		Description:    "/etc/shadow file has permissions that are too wide.",
 		Recommendation: "Change the permissions of /etc/shadow to 0640.",
 	}
-	ShadowEmptyHash = &fpb.Advisory{
+	ShadowEmptyHash = &pb.Advisory{
 		Reference:      "shadow_empty_hash",
 		Description:    "User has an empty password.",
 		Recommendation: "Set up a password for the user.",
 	}
-	ShadowWeakHashType = &fpb.Advisory{
+	ShadowWeakHashType = &pb.Advisory{
 		Reference:      "shadow_weak_hash_type",
 		Description:    "User uses weak hash for the hash of his password.",
 		Recommendation: "Change the hash function to SHA512.",
@@ -92,7 +96,7 @@ func (m *Minion) ListInitialInterests(ctx context.Context, req *pb.ListInitialIn
 // AnalyzeFilesRequest. It then returns security issues found in those files as
 // Findings in pb.AnalyzeFilesResponse.
 func (m *Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (*pb.AnalyzeFilesResponse, error) {
-	var allFindings []*fpb.Finding
+	var allFindings []*pb.Finding
 
 	for _, file := range req.GetFiles() {
 		switch file.GetMetadata().Path {
@@ -114,7 +118,7 @@ func (m *Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) 
 	ts := ptypes.TimestampNow()
 	// Update Findings with correct Source.
 	for _, f := range allFindings {
-		f.Source = &fpb.Source{
+		f.Source = &pb.Source{
 			ScanId:        req.ScanId,
 			Minion:        "passwdfile",
 			DetectionTime: ts,
@@ -128,16 +132,16 @@ func (m *Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) 
 
 // AnalyzePasswd looks for security issues in the /etc/passwd file and reports
 // them as Findings.
-func AnalyzePasswd(file *pb.File) ([]*fpb.Finding, error) {
-	var findings []*fpb.Finding
+func AnalyzePasswd(file *pb.File) ([]*pb.Finding, error) {
+	var findings []*pb.Finding
 
 	if md := file.GetMetadata(); md != nil && !ArePasswdPermissionsSecure(md) {
-		findings = append(findings, &fpb.Finding{
-			Accuracy: fpb.Finding_ACCURACY_FIRM,
-			Severity: fpb.Finding_SEVERITY_HIGH,
+		findings = append(findings, &pb.Finding{
+			Accuracy: pb.Finding_ACCURACY_FIRM,
+			Severity: pb.Finding_SEVERITY_HIGH,
 			Advisory: PasswdPermissions,
-			VulnerableResources: []*fpb.Resource{
-				&fpb.Resource{
+			VulnerableResources: []*pb.Resource{
+				&pb.Resource{
 					Path:           "/etc/passwd",
 					AdditionalInfo: fmt.Sprintf("current permissions: %#o.", file.GetMetadata().Permissions),
 				},
@@ -156,12 +160,12 @@ func AnalyzePasswd(file *pb.File) ([]*fpb.Finding, error) {
 		// Average accuracy is assigned as we are not checking if there
 		// is any service that the user can log into.
 		if user.PasswordHash == "" {
-			findings = append(findings, &fpb.Finding{
-				Accuracy: fpb.Finding_ACCURACY_AVERAGE,
-				Severity: fpb.Finding_SEVERITY_MEDIUM,
+			findings = append(findings, &pb.Finding{
+				Accuracy: pb.Finding_ACCURACY_AVERAGE,
+				Severity: pb.Finding_SEVERITY_MEDIUM,
 				Advisory: PasswdEmptyHash,
-				VulnerableResources: []*fpb.Resource{
-					&fpb.Resource{
+				VulnerableResources: []*pb.Resource{
+					&pb.Resource{
 						Path:           "/etc/passwd",
 						AdditionalInfo: fmt.Sprintf("username: %s", user.Username),
 					},
@@ -170,12 +174,12 @@ func AnalyzePasswd(file *pb.File) ([]*fpb.Finding, error) {
 		}
 
 		if !user.UsesShadowFile() && user.PasswordHash.UsesWeakHashing() {
-			findings = append(findings, &fpb.Finding{
-				Accuracy: fpb.Finding_ACCURACY_FIRM,
-				Severity: fpb.Finding_SEVERITY_LOW,
+			findings = append(findings, &pb.Finding{
+				Accuracy: pb.Finding_ACCURACY_FIRM,
+				Severity: pb.Finding_SEVERITY_LOW,
 				Advisory: PasswdWeakHashType,
-				VulnerableResources: []*fpb.Resource{
-					&fpb.Resource{
+				VulnerableResources: []*pb.Resource{
+					&pb.Resource{
 						Path:           "/etc/passwd",
 						AdditionalInfo: fmt.Sprintf("username: %s", user.Username),
 					},
@@ -184,12 +188,12 @@ func AnalyzePasswd(file *pb.File) ([]*fpb.Finding, error) {
 		}
 
 		if user.IsBackdooredRoot() {
-			findings = append(findings, &fpb.Finding{
-				Accuracy: fpb.Finding_ACCURACY_GREAT,
-				Severity: fpb.Finding_SEVERITY_HIGH,
+			findings = append(findings, &pb.Finding{
+				Accuracy: pb.Finding_ACCURACY_GREAT,
+				Severity: pb.Finding_SEVERITY_HIGH,
 				Advisory: PasswdBackdoor,
-				VulnerableResources: []*fpb.Resource{
-					&fpb.Resource{
+				VulnerableResources: []*pb.Resource{
+					&pb.Resource{
 						Path:           "/etc/passwd",
 						AdditionalInfo: fmt.Sprintf("username: %s", user.Username),
 					},
@@ -202,16 +206,16 @@ func AnalyzePasswd(file *pb.File) ([]*fpb.Finding, error) {
 
 // AnalyzeShadow looks for security issues in the /etc/shadow file and reports
 // them as Findings.
-func AnalyzeShadow(file *pb.File) ([]*fpb.Finding, error) {
-	var findings []*fpb.Finding
+func AnalyzeShadow(file *pb.File) ([]*pb.Finding, error) {
+	var findings []*pb.Finding
 
 	if md := file.GetMetadata(); md != nil && !AreShadowPermissionsSecure(md) {
-		findings = append(findings, &fpb.Finding{
-			Accuracy: fpb.Finding_ACCURACY_FIRM,
-			Severity: fpb.Finding_SEVERITY_HIGH,
+		findings = append(findings, &pb.Finding{
+			Accuracy: pb.Finding_ACCURACY_FIRM,
+			Severity: pb.Finding_SEVERITY_HIGH,
 			Advisory: ShadowPermissions,
-			VulnerableResources: []*fpb.Resource{
-				&fpb.Resource{
+			VulnerableResources: []*pb.Resource{
+				&pb.Resource{
 					Path:           "/etc/shadow",
 					AdditionalInfo: fmt.Sprintf("current permissions: %#o.", file.GetMetadata().Permissions),
 				},
@@ -228,12 +232,12 @@ func AnalyzeShadow(file *pb.File) ([]*fpb.Finding, error) {
 
 		// Check if user can login without a password.
 		if shadow.PasswordHash == "" {
-			findings = append(findings, &fpb.Finding{
-				Accuracy: fpb.Finding_ACCURACY_AVERAGE,
-				Severity: fpb.Finding_SEVERITY_MEDIUM,
+			findings = append(findings, &pb.Finding{
+				Accuracy: pb.Finding_ACCURACY_AVERAGE,
+				Severity: pb.Finding_SEVERITY_MEDIUM,
 				Advisory: ShadowEmptyHash,
-				VulnerableResources: []*fpb.Resource{
-					&fpb.Resource{
+				VulnerableResources: []*pb.Resource{
+					&pb.Resource{
 						Path:           "/etc/shadow",
 						AdditionalInfo: fmt.Sprintf("userame: %s", shadow.Username),
 					},
@@ -242,12 +246,12 @@ func AnalyzeShadow(file *pb.File) ([]*fpb.Finding, error) {
 		}
 
 		if shadow.PasswordHash.UsesWeakHashing() {
-			findings = append(findings, &fpb.Finding{
-				Accuracy: fpb.Finding_ACCURACY_FIRM,
-				Severity: fpb.Finding_SEVERITY_LOW,
+			findings = append(findings, &pb.Finding{
+				Accuracy: pb.Finding_ACCURACY_FIRM,
+				Severity: pb.Finding_SEVERITY_LOW,
 				Advisory: ShadowWeakHashType,
-				VulnerableResources: []*fpb.Resource{
-					&fpb.Resource{
+				VulnerableResources: []*pb.Resource{
+					&pb.Resource{
 						Path:           "/etc/shadow",
 						AdditionalInfo: fmt.Sprintf("userame: %s", shadow.Username),
 					},

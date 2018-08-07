@@ -11,33 +11,31 @@
 //  See the License for the specific language governing permissions and
 //	limitations under the License.
 
-package passwdfile
+package passwd
 
 import (
+	"context"
 	"os"
 	"reflect"
 	"testing"
 	"time"
+
+	pb "github.com/google/minions/proto/minions"
+	"github.com/stretchr/testify/require"
 )
 
-// TODO(zbylut): check for specific Findings in the tests below after we have
+// TODO: check for specific Findings in the tests below after we have
 // agreed upon a specific Finding format.
 
 // TestListingInterests checks if the Minion returns the expected number of
 // Interests.
 func TestListingInterests(t *testing.T) {
 	ctx := context.Background()
-	mux := rpc.NewServeMux()
-	srv := rpctest.NewServer(mux)
-	defer srv.Close()
 
 	var minion Minion
 	response, err := minion.ListInitialInterests(ctx, &pb.ListInitialInterestsRequest{})
-	if err != nil {
-		t.Errorf("ListInitialInterests() unexpected error: %v", err)
-	} else if len(response.GetInterests()) != 2 {
-		t.Errorf("ListInitialInterests(): want 2 Interest, got %d", len(response.GetInterests()))
-	}
+	require.NoError(t, err)
+	require.Len(t, response.GetInterests(), 2)
 }
 
 // TestAnalyzingFiles checks if correct number of Findings is returned both
@@ -72,15 +70,9 @@ func TestAnalyzingFiles(t *testing.T) {
 	}
 
 	res, err := minion.AnalyzeFiles(ctx, request)
-	if err != nil {
-		t.Errorf("AnalyzeFiles() returned unexpected error %v", err)
-	} else if len(res.GetFindings()) != 3 {
-		t.Errorf("AnalyzeFiles(): want 3 Findings, got %d (%v)", len(res.GetFindings()), res.GetFindings())
-	}
-
-	if len(res.GetNewInterests()) != 0 {
-		t.Errorf("AnalyzeFiles() returned unexpected NewInterests: %v", res.GetNewInterests())
-	}
+	require.NoError(t, err)
+	require.Len(t, res.GetFindings(), 3)
+	require.Len(t, res.GetNewInterests(), 0)
 }
 
 // TestPasswdAnalyzing checks if the AnalyzePasswd method is returning
@@ -88,9 +80,8 @@ func TestAnalyzingFiles(t *testing.T) {
 func TestPasswdAnalyzing(t *testing.T) {
 	malformedTest := &pb.File{Data: []byte("very malformed file")}
 
-	if _, err := AnalyzePasswd(malformedTest); err == nil {
-		t.Errorf("AnalyzePasswd(%v): expected error, got nil", malformedTest)
-	}
+	_, err := AnalyzePasswd(malformedTest)
+	require.Error(t, err)
 
 	manyFindingsTest := &pb.File{
 		Data: []byte("backdoor:x:0:2:suprise:/root:/bin/sh\n" +
@@ -99,11 +90,9 @@ func TestPasswdAnalyzing(t *testing.T) {
 		Metadata: &pb.FileMetadata{Permissions: 0777},
 	}
 
-	if findings, err := AnalyzePasswd(manyFindingsTest); err != nil {
-		t.Errorf("AnalyzePasswd(%v): unexpected error %v", manyFindingsTest, err)
-	} else if len(findings) != 4 {
-		t.Errorf("AnalyzePasswd(%v): got %v findings, want 4", manyFindingsTest, len(findings))
-	}
+	findings, err := AnalyzePasswd(manyFindingsTest)
+	require.NoError(t, err)
+	require.Len(t, findings, 4)
 }
 
 // TestShadowAnalyzing checks if the AnalyzeShadow method is returning
@@ -111,9 +100,8 @@ func TestPasswdAnalyzing(t *testing.T) {
 func TestShadowAnalyzing(t *testing.T) {
 	malformedTest := &pb.File{Data: []byte("::::::")}
 
-	if _, err := AnalyzeShadow(malformedTest); err == nil {
-		t.Errorf("AnalyzeShadow(%v): expected error, got nil", malformedTest)
-	}
+	_, err := AnalyzeShadow(malformedTest)
+	require.Error(t, err, "AnalyzeShadow(%v): expected error, got nil", malformedTest)
 
 	manyFindingsTest := &pb.File{
 		Data: []byte("root:!$1$salt$hash:16600:0:99999:7:::\n" +
@@ -122,11 +110,9 @@ func TestShadowAnalyzing(t *testing.T) {
 		Metadata: &pb.FileMetadata{Permissions: 0777},
 	}
 
-	if findings, err := AnalyzeShadow(manyFindingsTest); err != nil {
-		t.Errorf("AnalyzeShadow(%v): unexpected error %v", manyFindingsTest, err)
-	} else if len(findings) != 3 {
-		t.Errorf("AnalyzeShadow(%v): got %v findings, want 3", manyFindingsTest, len(findings))
-	}
+	findings, err := AnalyzeShadow(manyFindingsTest)
+	require.NoError(t, err, "AnalyzeShadow(%v): unexpected error %v", manyFindingsTest, err)
+	require.Len(t, findings, 3)
 }
 
 func TestPasswdPermissions(t *testing.T) {
@@ -186,9 +172,8 @@ func TestShadowParsing(t *testing.T) {
 
 	shadow, err := NewShadowInfo(goodShadowLine)
 
-	if err != nil {
-		t.Errorf("NewShadowInfo(%q) shouldn't return an error %v", goodShadowLine, err)
-	} else if !reflect.DeepEqual(shadow, expectedShadow) {
+	require.NoError(t, err)
+	if !reflect.DeepEqual(shadow, expectedShadow) {
 		t.Errorf("NewShadowInfo(%q) = %v, want %v", goodShadowLine, shadow, expectedShadow)
 	}
 }
@@ -212,11 +197,8 @@ func TestPasswdParsing(t *testing.T) {
 
 	user, err := NewUser(correctUserLine)
 
-	if err != nil {
-		t.Errorf("NewUser(%q) shouldn't return an error %v", correctUserLine, err)
-	} else if user != expectedUser {
-		t.Errorf("NewUser(%q) = %v, want %v", correctUserLine, user, expectedUser)
-	}
+	require.NoError(t, err, "NewUser(%q) shouldn't return an error %v", correctUserLine, err)
+	require.Equal(t, expectedUser, user, "NewUser(%q)", correctUserLine)
 }
 
 func TestBackdooredRoot(t *testing.T) {

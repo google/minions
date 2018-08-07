@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"syscall"
 
 	"github.com/google/minions/go/overlord/interests"
@@ -41,10 +40,11 @@ func loadFiles(intrs []*minions.Interest, maxKb int, maxFiles int, root string) 
 
 		if e != nil {
 			// If we don't have permission, skip the directory but don't bail out.
-			if strings.Contains(e.Error(), "permission denied") {
+			if os.IsPermission(e) {
 				return filepath.SkipDir
 			}
-			if strings.Contains(e.Error(), "no such file") {
+			// This seems to happen for volatile dirs.
+			if os.IsNotExist(e) {
 				return filepath.SkipDir
 			}
 
@@ -87,7 +87,12 @@ func loadFiles(intrs []*minions.Interest, maxKb int, maxFiles int, root string) 
 		case minions.Interest_METADATA_AND_DATA:
 			chunks, err := getDataChunks(path)
 			if err != nil {
-				return nil, err
+				if os.IsPermission(err) {
+					log.Printf("Cannot send %s. Permission denied. Skipping.", path)
+					continue
+				} else {
+					return nil, err
+				}
 			}
 			f.DataChunks = chunks
 			break

@@ -34,6 +34,21 @@ func TestParsesFiles_onFilesPresent_selectsFiles(t *testing.T) {
 	require.Equal(t, dir+"/foo/bar/temp.tmp", p)
 }
 
+func TestParsesFiles_onSelectedFileUnaccessible_doesNotCrash(t *testing.T) {
+	// We are owners of the file, but taking away our rights.
+	dir, err := createFile(t, "common_goblins_test", "/foo/bar", "temp.tmp", os.ModePerm)
+	require.NoError(t, err)
+	err = os.Chmod(dir+"/foo/bar/temp.tmp", 00000)
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	i := &minions.Interest{DataType: minions.Interest_METADATA_AND_DATA, PathRegexp: ".*\\.tmp"}
+	files, err := loadFiles([]*minions.Interest{i}, 10000, 1000, dir)
+	require.NoError(t, err)
+	// Expect that will will skip, with no errors.
+	require.Empty(t, files[0])
+}
+
 func TestParsesFiles_onMultipleInterests_selectsFiles(t *testing.T) {
 	dir, err := createFile(t, "common_goblins_test", "/foo/bar", "temp.tmp", os.ModePerm)
 	require.NoError(t, err)

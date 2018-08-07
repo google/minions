@@ -13,7 +13,7 @@ First working version of Minions with the basic e2e workflow.
 - [x] Local goblin with local FS access.
 - [ ] Full Overlord implementation (data chunks reassembly,
       routing to Minions)
-- [ ] 3 Minions, of which at least 1 with state keeping.
+- [x] 3 Minions, of which at least 1 with state keeping.
 - [x] Minions and Overlord have clear runners
 - [x] Clear step by step "how to run it" instructions.
 

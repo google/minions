@@ -28,6 +28,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
@@ -69,10 +70,10 @@ func NewMinion(apiKey string) *Minion {
 // ListInitialInterests returns a list of files which might contain
 // package information for parsing.
 func (m Minion) ListInitialInterests(ctx context.Context, req *pb.ListInitialInterestsRequest) (*pb.ListInitialInterestsResponse, error) {
-	osReleaseEtc := interest("/etc/os-release")        // OS Release with OS and version info
-	osReleaseUsrLib := interest("/usr/lib/os-release") // Alternative location for the OS release
-	dpkSstatus := interest("/var/lib/dpkg/status")     // DPKG repo (for debian-like).
-	rpmDatabase := interest("/var/lib/rpm/Packages")   // RPM database
+	osReleaseEtc := interest(regexp.MustCompile("^/etc/os-release$").String())        // OS Release with OS and version info
+	osReleaseUsrLib := interest(regexp.MustCompile("^/usr/lib/os-release$").String()) // Alternative location for the OS release
+	dpkSstatus := interest(regexp.MustCompile("^/var/lib/dpkg/status$").String())     // DPKG repo (for debian-like).
+	rpmDatabase := interest(regexp.MustCompile("^/var/lib/rpm/Packages$").String())   // RPM database
 	interests := []*pb.Interest{&dpkSstatus, &osReleaseEtc, &osReleaseUsrLib, &rpmDatabase}
 	return &pb.ListInitialInterestsResponse{Interests: interests}, nil
 }

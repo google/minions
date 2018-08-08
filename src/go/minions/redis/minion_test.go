@@ -18,11 +18,20 @@ import (
 	"os"
 	"testing"
 
+	"golang.org/x/net/context"
+
 	"github.com/phayes/permbits"
 
 	pb "github.com/google/minions/proto/minions"
 	"github.com/stretchr/testify/require"
 )
+
+func TestListInitialInterests_returnsExpectedLength(t *testing.T) {
+	m := &Minion{}
+	resp, err := m.ListInitialInterests(context.Background(), nil)
+	require.NoError(t, err)
+	require.Len(t, resp.GetInterests(), 2)
+}
 
 func TestAnalyzeFiles_ubuntuConfig_returnsNoVuln(t *testing.T) {
 	m := &Minion{}

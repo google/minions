@@ -46,9 +46,12 @@ func NewMinion() *Minion {
 // ListInitialInterests returns a list of files which might contain
 // package information for parsing.
 func (m Minion) ListInitialInterests(ctx context.Context, req *pb.ListInitialInterestsRequest) (*pb.ListInitialInterestsResponse, error) {
+	redisConfig := regexp.MustCompile(`^/etc/redis/.*\\.conf$`)
+	localConfig := regexp.MustCompile(`^/usr/local/etc/redis/.*\\.conf$`)
+
 	interests := []*pb.Interest{
-		interest("/etc/redis/.*\\.conf"),
-		interest("/usr/local/etc/redis/.*\\.conf"),
+		interest(redisConfig.String()),
+		interest(localConfig.String()),
 	}
 	return &pb.ListInitialInterestsResponse{Interests: interests}, nil
 }

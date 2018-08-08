@@ -57,7 +57,7 @@ func loadFiles(intrs []*minions.Interest, maxKb int, maxFiles int, root string) 
 		if !f.IsDir() {
 			// Let's see if we match any interest!
 			for _, i := range intrs {
-				r, err := regexp.MatchString("^"+i.GetPathRegexp(), path)
+				r, err := regexp.MatchString(i.GetPathRegexp(), path)
 				if err == nil && r {
 					// NOTE: this overwrites existing datatypes, under the assumption that the
 					// minification has taken care of this.

@@ -16,6 +16,7 @@ package vulners
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/google/minions/go/minions"
@@ -98,7 +99,7 @@ func TestListInitialInterests(t *testing.T) {
 			foundPath := false
 			interests, _ := m.ListInitialInterests(nil, nil)
 			for _, i := range interests.GetInterests() {
-				if i.GetPathRegexp() == p {
+				if f, _ := regexp.MatchString(i.GetPathRegexp(), p); f {
 					foundPath = true
 				}
 			}

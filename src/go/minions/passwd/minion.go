@@ -27,6 +27,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -78,14 +79,16 @@ type Minion struct{}
 
 // ListInitialInterests returns the initial interests of a Minion.
 func (m *Minion) ListInitialInterests(ctx context.Context, req *pb.ListInitialInterestsRequest) (*pb.ListInitialInterestsResponse, error) {
+	passwdRegexp := regexp.MustCompile(`^/etc/passwd$`)
+	shadowRegexp := regexp.MustCompile(`^/etc/shadow$`)
 	return &pb.ListInitialInterestsResponse{
 		Interests: []*pb.Interest{
 			&pb.Interest{
-				PathRegexp: "^/etc/passwd$",
+				PathRegexp: passwdRegexp.String(),
 				DataType:   pb.Interest_METADATA_AND_DATA,
 			},
 			&pb.Interest{
-				PathRegexp: "^/etc/shadow$",
+				PathRegexp: shadowRegexp.String(),
 				DataType:   pb.Interest_METADATA_AND_DATA,
 			},
 		},

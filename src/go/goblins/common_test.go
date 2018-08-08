@@ -64,10 +64,10 @@ func TestParsesFiles_onMultipleInterests_selectsFiles(t *testing.T) {
 
 	files, err := loadFiles([]*minions.Interest{i, i2}, 10000, 1000, dir)
 	require.NoError(t, err)
-	p := files[0][0].GetMetadata().GetPath()
-	require.Equal(t, dir+"/foo/bar/temp.foo", p)
-	p = files[0][1].GetMetadata().GetPath()
-	require.Equal(t, dir+"/foo/bar/temp.tmp", p)
+
+	expectedFiles := []string{dir + "/foo/bar/temp.foo", dir + "/foo/bar/temp.tmp"}
+	require.Contains(t, expectedFiles, files[0][0].GetMetadata().GetPath())
+	require.Contains(t, expectedFiles, files[0][1].GetMetadata().GetPath())
 }
 
 func TestParsesFiles_anchorsRegexpToRoot(t *testing.T) {

@@ -70,17 +70,6 @@ func TestParsesFiles_onMultipleInterests_selectsFiles(t *testing.T) {
 	require.Contains(t, expectedFiles, files[0][1].GetMetadata().GetPath())
 }
 
-func TestParsesFiles_anchorsRegexpToRoot(t *testing.T) {
-	dir, err := createFile(t, "common_goblins_test", "/different/foo/bar", "temp.tmp", os.ModePerm)
-	defer os.RemoveAll(dir)
-
-	i := &minions.Interest{DataType: minions.Interest_METADATA, PathRegexp: "/foo/bar"}
-	files, err := loadFiles([]*minions.Interest{i}, 10000, 1000, dir)
-	require.NoError(t, err)
-	// Note that empty does not check recursively, so we fetch the first (empty) element.
-	require.Empty(t, files[0])
-}
-
 func TestParsesFiles_onFilesPresent_getsMetadata(t *testing.T) {
 	dir, err := createFile(t, "common_goblins_test", "/foo", "temp.tmp", 0700)
 	require.NoError(t, err)

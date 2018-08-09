@@ -14,9 +14,9 @@
 package overlord
 
 import (
-	"log"
-
 	"fmt"
+	"log"
+	"sort"
 
 	"github.com/google/minions/go/overlord/interests"
 	"github.com/google/uuid"
@@ -43,6 +43,42 @@ type mappedInterest struct {
 // state stores the current state of the scan
 type state struct {
 	interests []*mappedInterest
+	files     map[string]*pb.File
+}
+
+func (s *state) add(files []*pb.File) error {
+	for _, f := range files {
+		current, ok := s.files[f.GetMetadata().GetPath()]
+		if !ok {
+			current = &pb.File{
+				Metadata: f.GetMetadata(),
+				DataChunks: []*pb.DataChunk{
+					&pb.DataChunk{
+						Offset: 0,
+					},
+				},
+			}
+			s.files[f.GetMetadata().GetPath()] = current
+		}
+		currentChunk := current.GetDataChunks()[0]
+		size := int64(len(currentChunk.GetData()))
+
+		newChunks := f.GetDataChunks()
+		sort.Slice(newChunks, func(i, j int) bool {
+			return newChunks[i].GetOffset() < newChunks[j].GetOffset()
+		})
+		for _, chunk := range newChunks {
+			if chunk.GetOffset() < size {
+				return fmt.Errorf("received a file with overlapping DataChunks")
+			}
+			if chunk.GetOffset() != size {
+				return fmt.Errorf("received a file with missing DataChunks")
+			}
+			currentChunk.Data = append(currentChunk.Data, chunk.GetData()...)
+			size += int64(len(chunk.GetData()))
+		}
+	}
+	return nil
 }
 
 // New returns an initialized Server, which connects to a set of pre-specified minions
@@ -94,6 +130,7 @@ func (s *Server) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb
 
 	scanState := state{
 		interests: make([]*mappedInterest, len(s.initialInterests)),
+		files:     make(map[string]*pb.File),
 	}
 	copy(scanState.interests, s.initialInterests)
 
@@ -128,9 +165,63 @@ func (s *Server) ListInterests(ctx context.Context, req *pb.ListInterestsRequest
 // ScanFiles runs security scan on a set of files, assuming they were actually
 // needed by the backend minions.
 func (s *Server) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.ScanFilesResponse, error) {
-	_, ok := s.scans[req.GetScanId()]
+	scan, ok := s.scans[req.GetScanId()]
 	if !ok {
 		return nil, fmt.Errorf("unknown scan ID %s", req.GetScanId())
 	}
-	return nil, fmt.Errorf("unimplemented")
+
+	if err := scan.add(req.GetFiles()); err != nil {
+		return nil, fmt.Errorf("error adding files to the scan state: %v", err)
+	}
+
+	routedFiles := make(map[string][]*mpb.File)
+
+	for _, f := range scan.files {
+		for _, candidate := range scan.interests {
+			if match, err := interests.IsMatching(candidate.interest, f); err != nil {
+				return nil, err
+			} else if !match {
+				continue
+			}
+
+			isComplete := f.GetMetadata().GetSize() == int64(len(f.GetDataChunks()[0].GetData()))
+
+			if candidate.interest.DataType == mpb.Interest_METADATA_AND_DATA && isComplete {
+				routedFiles[candidate.minion] = append(routedFiles[candidate.minion], &mpb.File{
+					Metadata: f.GetMetadata(),
+					Data:     f.GetDataChunks()[0].GetData(),
+				})
+			} else if candidate.interest.DataType == mpb.Interest_METADATA {
+				// Send only metadata.
+				routedFiles[candidate.minion] = append(routedFiles[candidate.minion], &mpb.File{
+					Metadata: f.GetMetadata(),
+				})
+			}
+		}
+	}
+
+	resp := &pb.ScanFilesResponse{}
+	for address, files := range routedFiles {
+		minion, present := s.minions[address]
+		if !present {
+			return nil, fmt.Errorf("interest expressed by a minion that is not known to the Overlord, %q", address)
+		}
+		minionResp, err := minion.AnalyzeFiles(ctx, &mpb.AnalyzeFilesRequest{
+			ScanId: req.ScanId,
+			Files:  files,
+		})
+		if err != nil {
+			return nil, err
+		}
+		resp.Results = append(resp.Results, minionResp.GetFindings()...)
+		resp.NewInterests = append(resp.NewInterests, minionResp.GetNewInterests()...)
+
+		for _, newInterest := range minionResp.GetNewInterests() {
+			scan.interests = append(scan.interests, &mappedInterest{
+				interest: newInterest,
+				minion:   address,
+			})
+		}
+	}
+	return resp, nil
 }

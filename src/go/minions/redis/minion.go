@@ -64,7 +64,7 @@ func interest(name string) *pb.Interest {
 
 // AnalyzeFiles will parse the provided configuration file and flag issues.
 func (m Minion) AnalyzeFiles(ctx context.Context, req *pb.AnalyzeFilesRequest) (*pb.AnalyzeFilesResponse, error) {
-	// IMPORTANT: The current algorith, is pretty naive, and just assumes that all the configs
+	// IMPORTANT: The current algorithm is pretty naive, and just assumes that all the configs
 	// that we identify are part of a single redis installation. That's probably true in most
 	// cases, but not all. A better approach would be to identify "root" configs and recurse
 	// all include statements by issuing additional interests.

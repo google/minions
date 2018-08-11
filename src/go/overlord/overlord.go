@@ -29,7 +29,7 @@ import (
 
 // Server implements the OverlordServer interface, the orchestrator of Minions' infrastructure.
 type Server struct {
-	minions          map[string]mpb.MinionClient // THe minions we know about and their address
+	minions          map[string]mpb.MinionClient // The minions we know about and their address
 	initialInterests []*mappedInterest
 	scans            map[string]state
 }
@@ -100,24 +100,32 @@ func New(ctx context.Context, minionAddresses []string, opts ...grpc.DialOption)
 		log.Println("Ok, minion connected")
 		server.minions[addr] = mpb.NewMinionClient(c)
 	}
-
 	log.Println("Retrieving initial interests")
-	for name, m := range server.minions {
+	interests, err := getInterestsFromMinions(ctx, server.minions)
+	if err != nil {
+		return nil, err
+	}
+	server.initialInterests = interests
+	log.Printf("Initial interests: %d", len(server.initialInterests))
+	return server, nil
+}
+
+func getInterestsFromMinions(ctx context.Context, minions map[string]mpb.MinionClient) ([]*mappedInterest, error) {
+	var interests []*mappedInterest
+	for name, m := range minions {
 		// TODO(paradoxengine): most likely, a deadline here?
 		intResp, err := m.ListInitialInterests(ctx, &mpb.ListInitialInterestsRequest{})
 		if err != nil {
 			return nil, err
 		}
 		for _, v := range intResp.GetInterests() {
-			server.initialInterests = append(server.initialInterests, &mappedInterest{
+			interests = append(interests, &mappedInterest{
 				interest: v,
 				minion:   name,
 			})
 		}
 	}
-
-	log.Printf("Initial interests: %d", len(server.initialInterests))
-	return server, nil
+	return interests, nil
 }
 
 // CreateScan set up a security scan which can then be fed files via ScanFiles.

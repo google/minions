@@ -16,7 +16,6 @@ package overlord
 import (
 	"fmt"
 	"log"
-	"sort"
 
 	"github.com/google/minions/go/overlord/interests"
 	"github.com/google/uuid"
@@ -30,8 +29,8 @@ import (
 // Server implements the OverlordServer interface, the orchestrator of Minions' infrastructure.
 type Server struct {
 	minions          map[string]mpb.MinionClient // The minions we know about and their address
-	initialInterests []*mappedInterest
-	scans            map[string]state
+	initialInterests []*mappedInterest           // The initial interests all scans will get
+	stateManager     StateManager                // Manages local stage between scans.
 }
 
 // mappedInterest stores the interest along with the address of the minion which expressed it.
@@ -40,53 +39,12 @@ type mappedInterest struct {
 	minion   string
 }
 
-// state stores the current state of the scan
-type state struct {
-	interests []*mappedInterest
-	files     map[string]*pb.File
-}
-
-func (s *state) add(files []*pb.File) error {
-	for _, f := range files {
-		current, ok := s.files[f.GetMetadata().GetPath()]
-		if !ok {
-			current = &pb.File{
-				Metadata: f.GetMetadata(),
-				DataChunks: []*pb.DataChunk{
-					&pb.DataChunk{
-						Offset: 0,
-					},
-				},
-			}
-			s.files[f.GetMetadata().GetPath()] = current
-		}
-		currentChunk := current.GetDataChunks()[0]
-		size := int64(len(currentChunk.GetData()))
-
-		newChunks := f.GetDataChunks()
-		sort.Slice(newChunks, func(i, j int) bool {
-			return newChunks[i].GetOffset() < newChunks[j].GetOffset()
-		})
-		for _, chunk := range newChunks {
-			if chunk.GetOffset() < size {
-				return fmt.Errorf("received a file with overlapping DataChunks")
-			}
-			if chunk.GetOffset() != size {
-				return fmt.Errorf("received a file with missing DataChunks")
-			}
-			currentChunk.Data = append(currentChunk.Data, chunk.GetData()...)
-			size += int64(len(chunk.GetData()))
-		}
-	}
-	return nil
-}
-
 // New returns an initialized Server, which connects to a set of pre-specified minions
 // to initialize them.
 func New(ctx context.Context, minionAddresses []string, opts ...grpc.DialOption) (*Server, error) {
 	server := &Server{
-		minions: make(map[string]mpb.MinionClient),
-		scans:   make(map[string]state),
+		minions:      make(map[string]mpb.MinionClient),
+		stateManager: NewLocalStateManager(),
 	}
 
 	log.Println("Reaching out to all minions.")
@@ -136,18 +94,19 @@ func (s *Server) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb
 	scan := &pb.Scan{}
 	scan.ScanId = uuid.New().String()
 
-	scanState := state{
-		interests: make([]*mappedInterest, len(s.initialInterests)),
-		files:     make(map[string]*pb.File),
+	s.stateManager.CreateScan(scan.ScanId)
+	for _, i := range s.initialInterests {
+		s.stateManager.AddInterest(scan.ScanId, i.interest, i.minion)
 	}
-	copy(scanState.interests, s.initialInterests)
 
-	for _, interest := range scanState.interests {
+	knownInterests, err := s.stateManager.GetInterests(scan.ScanId)
+	if err != nil {
+		return nil, err
+	}
+	for _, interest := range knownInterests {
 		scan.Interests = append(scan.Interests, interest.interest)
 	}
 	scan.Interests = interests.Minify(scan.Interests)
-
-	s.scans[scan.ScanId] = scanState
 
 	return scan, nil
 }
@@ -158,13 +117,16 @@ func (s *Server) ListInterests(ctx context.Context, req *pb.ListInterestsRequest
 	if req.GetPageToken() != "" {
 		return nil, fmt.Errorf("token support is unimplemented")
 	}
-	scan, ok := s.scans[req.GetScanId()]
-	if !ok {
+	if !s.stateManager.ScanExists(req.GetScanId()) {
 		return nil, fmt.Errorf("unknown scan ID %s", req.GetScanId())
 	}
+	scanInterests, err := s.stateManager.GetInterests(req.GetScanId())
+	if err != nil {
+		return nil, err
+	}
 	resp := &pb.ListInterestsResponse{}
-	for _, i := range scan.interests {
-		resp.Interests = append(resp.Interests, i.interest)
+	for _, interest := range scanInterests {
+		resp.Interests = append(resp.Interests, interest.interest)
 	}
 	resp.Interests = interests.Minify(resp.Interests)
 	return resp, nil
@@ -173,19 +135,28 @@ func (s *Server) ListInterests(ctx context.Context, req *pb.ListInterestsRequest
 // ScanFiles runs security scan on a set of files, assuming they were actually
 // needed by the backend minions.
 func (s *Server) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.ScanFilesResponse, error) {
-	scan, ok := s.scans[req.GetScanId()]
-	if !ok {
-		return nil, fmt.Errorf("unknown scan ID %s", req.GetScanId())
+	scanID := req.GetScanId()
+	if !s.stateManager.ScanExists(scanID) {
+		return nil, fmt.Errorf("unknown scan ID %s", scanID)
 	}
 
-	if err := scan.add(req.GetFiles()); err != nil {
+	if err := s.stateManager.AddFiles(req.GetScanId(), req.GetFiles()); err != nil {
 		return nil, fmt.Errorf("error adding files to the scan state: %v", err)
 	}
 
+	// Now distribute all complete files for scanning.
 	routedFiles := make(map[string][]*mpb.File)
 
-	for _, f := range scan.files {
-		for _, candidate := range scan.interests {
+	files, err := s.stateManager.GetFiles(scanID)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		interestsForMinions, err := s.stateManager.GetInterests(scanID)
+		if err != nil {
+			return nil, err
+		}
+		for _, candidate := range interestsForMinions {
 			if match, err := interests.IsMatching(candidate.interest, f); err != nil {
 				return nil, err
 			} else if !match {
@@ -197,7 +168,7 @@ func (s *Server) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.S
 			if candidate.interest.DataType == mpb.Interest_METADATA_AND_DATA && isComplete {
 				routedFiles[candidate.minion] = append(routedFiles[candidate.minion], &mpb.File{
 					Metadata: f.GetMetadata(),
-					Data:     f.GetDataChunks()[0].GetData(),
+					Data:     f.GetDataChunks()[0].GetData(), // Note we accumulate in the first chunk.
 				})
 			} else if candidate.interest.DataType == mpb.Interest_METADATA {
 				// Send only metadata.
@@ -224,11 +195,9 @@ func (s *Server) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.S
 		resp.Results = append(resp.Results, minionResp.GetFindings()...)
 		resp.NewInterests = append(resp.NewInterests, minionResp.GetNewInterests()...)
 
+		// Now export the new interests back to the state.
 		for _, newInterest := range minionResp.GetNewInterests() {
-			scan.interests = append(scan.interests, &mappedInterest{
-				interest: newInterest,
-				minion:   address,
-			})
+			s.stateManager.AddInterest(scanID, newInterest, address)
 		}
 	}
 	return resp, nil

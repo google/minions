@@ -19,12 +19,17 @@ import (
 	"log"
 	"net"
 
+	"github.com/google/minions/go/grpcutil"
+
 	pb "github.com/google/minions/proto/minions"
 	"google.golang.org/grpc"
 )
 
 var (
-	port = flag.Int("port", 20001, "Port to bind the minion to")
+	bind    = flag.String("bind", "localhost", "IP or hostname to bind to")
+	port    = flag.Int("port", 20001, "Port to bind the minion to")
+	sslCert = flag.String("ssl_cert", "", "Path to the SSL certificate (crt)")
+	sslKey  = flag.String("ssl_key", "", "Path to the SSL key (key)")
 )
 
 // StartMinion initializes a gRPC endpoint and populates it with the provided Minion.
@@ -32,12 +37,18 @@ var (
 func StartMinion(minion Minion, minionName string) {
 	flag.Parse()
 	log.Printf("StartMinion: Starting up minion on localhost: %s", minionName)
-	// TODO(paradoxengine): support binding on arbitrary IPs
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
+	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", *bind, *port))
 	if err != nil {
-		log.Fatalf("StartMinion: Failed to bind Minion to port: %v", err)
+		log.Fatalf("StartMinion: Failed to bind Minion to: %s:%d - %v", *bind, *port, err)
 	}
+
 	var opts []grpc.ServerOption
+	creds, err := grpcutil.GetSslServerCreds(*sslCert, *sslKey, "") // We don't validate client certs.
+	if creds == nil {
+		log.Println("WARNING: starting a Minion with no SSL support")
+	} else {
+		opts = append(opts, creds)
+	}
 	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterMinionServer(grpcServer, minion)
 	log.Printf("StartMinion: Minion created and registered, entering busy loop, ready to scan.")

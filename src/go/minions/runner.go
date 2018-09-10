@@ -44,6 +44,9 @@ func StartMinion(minion Minion, minionName string) {
 
 	var opts []grpc.ServerOption
 	creds, err := grpcutil.GetSslServerCreds(*sslCert, *sslKey, "") // We don't validate client certs.
+	if err != nil {
+		log.Fatalf("StartMinion: Failed to retrieve SSL creds: %v", err)
+	}
 	if creds == nil {
 		log.Println("WARNING: starting a Minion with no SSL support")
 	} else {

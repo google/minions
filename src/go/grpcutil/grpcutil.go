@@ -45,7 +45,12 @@ func GetSslServerCreds(certPath string, keyPath string, caCertPath string) (grpc
 	}
 
 	var creds credentials.TransportCredentials
-	if caCertPath != "" {
+	if caCertPath == "" {
+		log.Println("no CA set, all clients will be able to connect")
+		creds = credentials.NewTLS(&tls.Config{
+			Certificates: []tls.Certificate{certificate},
+		})
+	} else {
 		cas := x509.NewCertPool()
 		ca, err := ioutil.ReadFile(caCertPath)
 		if err != nil {
@@ -60,11 +65,6 @@ func GetSslServerCreds(certPath string, keyPath string, caCertPath string) (grpc
 			Certificates: []tls.Certificate{certificate},
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    cas,
-		})
-	} else {
-		log.Println("no CA set, all clients will be able to connect")
-		creds = credentials.NewTLS(&tls.Config{
-			Certificates: []tls.Certificate{certificate},
 		})
 	}
 	return grpc.Creds(creds), nil

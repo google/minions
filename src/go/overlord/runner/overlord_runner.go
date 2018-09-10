@@ -63,6 +63,9 @@ func main() {
 	}
 	var opts []grpc.ServerOption
 	creds, err := grpcutil.GetSslServerCreds(*sslCert, *sslKey, "") // We don't validate client certs.
+	if err != nil {
+		log.Fatalf("Failed to retrieve SSL creds: %v", err)
+	}
 	if creds == nil {
 		log.Println("WARNING: starting the Overlord with no SSL support")
 	} else {

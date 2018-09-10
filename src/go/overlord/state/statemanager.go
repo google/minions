@@ -11,7 +11,8 @@
 //  See the License for the specific language governing permissions and
 //	limitations under the License.
 
-package overlord
+// Package state handles, unsurprisingly, state for the Overlord.
+package state
 
 import (
 	"errors"
@@ -24,27 +25,8 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
-// StateManager handles the state of an Overlord through multiple
-// scans.
-type StateManager interface {
-	// AddFiles atomically sets the state of a minion during a scan.
-	AddFiles(scanID string, files []*pb.File) error
-	// AddInterest adds a new interest for a given minion to the state of the scan.
-	AddInterest(scanID string, interest *mpb.Interest, minion string) error
-	// CreateScan initializes the state for a scan.
-	CreateScan(scanID string) error
-	// GetFiles returns all the files known for a given ScanID
-	GetFiles(scanID string) ([]*pb.File, error)
-	// GetInterests returns all the interests known for a given ScanID, mapped to minions
-	GetInterests(scanID string) ([]*mappedInterest, error)
-	// RemoveFile atomically removes a given file from the state.
-	RemoveFile(scanID string, file *pb.File) (bool, error)
-	// ScanExists returns true if any state at all is known about the scan.
-	ScanExists(scanID string) bool
-}
-
-// LocalStateManager handles state through a local time-expiring cache.
-type LocalStateManager struct {
+// Local handles state through a local time-expiring cache.
+type Local struct {
 	lc *cache.Cache
 }
 
@@ -54,15 +36,15 @@ type state struct {
 	files     map[string]*pb.File
 }
 
-// NewLocalStateManager creates a StateManager backed by a local cache.
-func NewLocalStateManager() *LocalStateManager {
+// NewLocal creates a StateManager backed by a local cache.
+func NewLocal() *Local {
 	lc := cache.New(5*time.Minute, 10*time.Minute)
-	return &LocalStateManager{lc: lc}
+	return &Local{lc: lc}
 }
 
 // AddFiles adds a set of files to the state. This will also dynamically
 // merge chunks of files.
-func (l *LocalStateManager) AddFiles(scanID string, files []*pb.File) error {
+func (l *Local) AddFiles(scanID string, files []*pb.File) error {
 	s, found := l.getState(scanID)
 	if !found {
 		return errors.New("Cannot find state of scan")
@@ -104,7 +86,7 @@ func (l *LocalStateManager) AddFiles(scanID string, files []*pb.File) error {
 
 // CreateScan initializes the state for a scan. It resets the state
 // if it already exists.
-func (l *LocalStateManager) CreateScan(scanID string) error {
+func (l *Local) CreateScan(scanID string) error {
 	l.setState(scanID, state{
 		interests: make([]*mappedInterest, 0),
 		files:     make(map[string]*pb.File),
@@ -115,7 +97,7 @@ func (l *LocalStateManager) CreateScan(scanID string) error {
 // RemoveFile removes a given file from the state for a scan, if present.
 // Returns true if the file has been removed, false otherwise
 // (i.e. the file was not in the state)
-func (l *LocalStateManager) RemoveFile(scanID string, file *pb.File) (bool, error) {
+func (l *Local) RemoveFile(scanID string, file *pb.File) (bool, error) {
 	s, ok := l.getState(scanID)
 	if !ok {
 		return false, fmt.Errorf("No state for scan %s", scanID)
@@ -130,7 +112,7 @@ func (l *LocalStateManager) RemoveFile(scanID string, file *pb.File) (bool, erro
 }
 
 // AddInterest adds a new interest for a given minion to the state of the scan.
-func (l *LocalStateManager) AddInterest(scanID string, interest *mpb.Interest, minion string) error {
+func (l *Local) AddInterest(scanID string, interest *mpb.Interest, minion string) error {
 	s, _ := l.getState(scanID)
 	s.interests = append(s.interests, &mappedInterest{
 		interest: interest,
@@ -141,13 +123,13 @@ func (l *LocalStateManager) AddInterest(scanID string, interest *mpb.Interest, m
 }
 
 // ScanExists returns true if any state at all is known about the scan.
-func (l *LocalStateManager) ScanExists(scanID string) bool {
+func (l *Local) ScanExists(scanID string) bool {
 	_, exists := l.lc.Get(scanID)
 	return exists
 }
 
 // GetFiles returns all the files known for a given ScanID
-func (l *LocalStateManager) GetFiles(scanID string) ([]*pb.File, error) {
+func (l *Local) GetFiles(scanID string) ([]*pb.File, error) {
 	s, found := l.getState(scanID)
 	if !found {
 		return nil, errors.New("Scan does not exist")
@@ -160,7 +142,7 @@ func (l *LocalStateManager) GetFiles(scanID string) ([]*pb.File, error) {
 }
 
 // GetInterests returns all the interests known for a given ScanID, mapped to minions
-func (l *LocalStateManager) GetInterests(scanID string) ([]*mappedInterest, error) {
+func (l *Local) GetInterests(scanID string) ([]*mappedInterest, error) {
 	s, found := l.getState(scanID)
 	if !found {
 		return nil, errors.New("Scan does not exist")
@@ -168,11 +150,11 @@ func (l *LocalStateManager) GetInterests(scanID string) ([]*mappedInterest, erro
 	return s.interests, nil
 }
 
-func (l *LocalStateManager) getState(scanID string) (state, bool) {
+func (l *Local) getState(scanID string) (state, bool) {
 	s, found := l.lc.Get(scanID)
 	return s.(state), found
 }
 
-func (l *LocalStateManager) setState(scanID string, s state) {
+func (l *Local) setState(scanID string, s state) {
 	l.lc.SetDefault(scanID, s)
 }

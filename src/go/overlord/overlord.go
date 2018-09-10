@@ -18,6 +18,7 @@ import (
 	"log"
 
 	"github.com/google/minions/go/overlord/interests"
+	"github.com/google/minions/go/overlord/state"
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -39,12 +40,31 @@ type mappedInterest struct {
 	minion   string
 }
 
+// StateManager handles the state of an Overlord through multiple
+// scans.
+type StateManager interface {
+	// AddFiles atomically sets the state of a minion during a scan.
+	AddFiles(scanID string, files []*pb.File) error
+	// AddInterest adds a new interest for a given minion to the state of the scan.
+	AddInterest(scanID string, interest *mpb.Interest, minion string) error
+	// CreateScan initializes the state for a scan.
+	CreateScan(scanID string) error
+	// GetFiles returns all the files known for a given ScanID
+	GetFiles(scanID string) ([]*pb.File, error)
+	// GetInterests returns all the interests known for a given ScanID, mapped to minions
+	GetInterests(scanID string) ([]*mappedInterest, error)
+	// RemoveFile atomically removes a given file from the state.
+	RemoveFile(scanID string, file *pb.File) (bool, error)
+	// ScanExists returns true if any state at all is known about the scan.
+	ScanExists(scanID string) bool
+}
+
 // New returns an initialized Server, which connects to a set of pre-specified minions
 // to initialize them.
 func New(ctx context.Context, minionAddresses []string, opts ...grpc.DialOption) (*Server, error) {
 	server := &Server{
 		minions:      make(map[string]mpb.MinionClient),
-		stateManager: NewLocalStateManager(),
+		stateManager: state.NewLocal(),
 	}
 
 	log.Println("Reaching out to all minions.")

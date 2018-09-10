@@ -11,7 +11,7 @@
 //  See the License for the specific language governing permissions and
 //	limitations under the License.
 
-package overlord
+package state
 
 import (
 	"testing"
@@ -21,15 +21,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_LocalStateManager_createsScan(t *testing.T) {
-	l := NewLocalStateManager()
+func Test_Local_createsScan(t *testing.T) {
+	l := NewLocal()
 	require.False(t, l.ScanExists("foo_scan"))
 	l.CreateScan("foo_scan")
 	require.True(t, l.ScanExists("foo_scan"))
 }
 
-func Test_LocalStateManager_storesAndRetrievesFiles(t *testing.T) {
-	l := NewLocalStateManager()
+func Test_Local_storesAndRetrievesFiles(t *testing.T) {
+	l := NewLocal()
 	l.CreateScan("a")
 	files := make([]*pb.File, 0)
 	files = append(files, emptyFile("/foo"))
@@ -45,8 +45,8 @@ func Test_LocalStateManager_storesAndRetrievesFiles(t *testing.T) {
 	require.ElementsMatch(t, files, retrievedFiles)
 }
 
-func Test_LocalStateManager_deletesFiles(t *testing.T) {
-	l := NewLocalStateManager()
+func Test_Local_deletesFiles(t *testing.T) {
+	l := NewLocal()
 	scanID := "irrelevant"
 	l.CreateScan(scanID)
 	files := make([]*pb.File, 0)
@@ -78,8 +78,8 @@ func emptyFile(path string) *pb.File {
 	}
 }
 
-func Test_LocalStateManager_storesAndRetrievesInterests(t *testing.T) {
-	l := NewLocalStateManager()
+func Test_Local_storesAndRetrievesInterests(t *testing.T) {
+	l := NewLocal()
 	l.CreateScan("a")
 	interest := &mpb.Interest{DataType: mpb.Interest_METADATA_AND_DATA, PathRegexp: "foo"}
 	l.AddInterest("a", interest, "minion")

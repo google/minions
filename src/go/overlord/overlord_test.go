@@ -87,6 +87,6 @@ func (m *fakeMinionClient) AnalyzeFiles(ctx context.Context, req *mpb.AnalyzeFil
 	return nil, nil
 }
 
-// TOOD(paradoxengine): the overlord still needs plenty of unit tests
+// TODO: the overlord still needs plenty of unit tests
 // Cases that are untested: rebuilding chunks, routing results to minion,
 // state building through additional interests.

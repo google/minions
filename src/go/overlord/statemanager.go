@@ -38,7 +38,7 @@ type StateManager interface {
 	// GetInterests returns all the interests known for a given ScanID, mapped to minions
 	GetInterests(scanID string) ([]*mappedInterest, error)
 	// RemoveFile atomically removes a given file from the state.
-	RemoveFile(scanID string, file *pb.File) error
+	RemoveFile(scanID string, file *pb.File) (bool, error)
 	// ScanExists returns true if any state at all is known about the scan.
 	ScanExists(scanID string) bool
 }
@@ -113,10 +113,20 @@ func (l *LocalStateManager) CreateScan(scanID string) error {
 }
 
 // RemoveFile removes a given file from the state for a scan, if present.
-func (l *LocalStateManager) RemoveFile(scanID string, file *pb.File) error {
-	//l.lc.Delete(l.fileKey(scanID, file))
-	// TODO: implement me
-	return nil
+// Returns true if the file has been removed, false otherwise
+// (i.e. the file was not in the state)
+func (l *LocalStateManager) RemoveFile(scanID string, file *pb.File) (bool, error) {
+	s, ok := l.getState(scanID)
+	if !ok {
+		return false, fmt.Errorf("No state for scan %s", scanID)
+	}
+	path := file.GetMetadata().GetPath()
+	if _, ok := s.files[path]; ok {
+		delete(s.files, path)
+		l.setState(scanID, s)
+		return true, nil
+	}
+	return false, nil
 }
 
 // AddInterest adds a new interest for a given minion to the state of the scan.

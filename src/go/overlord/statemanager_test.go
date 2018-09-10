@@ -32,30 +32,50 @@ func Test_LocalStateManager_storesAndRetrievesFiles(t *testing.T) {
 	l := NewLocalStateManager()
 	l.CreateScan("a")
 	files := make([]*pb.File, 0)
-	// Note the creation of the datachunks, which is a bit testing internals :(
-	files = append(files, &pb.File{Metadata: &mpb.FileMetadata{Path: "/foo"},
-		DataChunks: []*pb.DataChunk{
-			&pb.DataChunk{
-				Offset: 0,
-			},
-		},
-	})
+	files = append(files, emptyFile("/foo"))
 	l.AddFiles("a", files)
 	retrievedFiles, err := l.GetFiles("a")
 	require.NoError(t, err)
 	require.ElementsMatch(t, files, retrievedFiles)
 
-	files = append(files, &pb.File{Metadata: &mpb.FileMetadata{Path: "/bar"},
+	files = append(files, emptyFile("/bar"))
+	l.AddFiles("a", files)
+	retrievedFiles, err = l.GetFiles("a")
+	require.NoError(t, err)
+	require.ElementsMatch(t, files, retrievedFiles)
+}
+
+func Test_LocalStateManager_deletesFiles(t *testing.T) {
+	l := NewLocalStateManager()
+	scanID := "irrelevant"
+	l.CreateScan(scanID)
+	files := make([]*pb.File, 0)
+	files = append(files, emptyFile("/foo"))
+	files = append(files, emptyFile("/bar"))
+	l.AddFiles(scanID, files)
+	retrievedFiles, err := l.GetFiles(scanID)
+	require.NoError(t, err)
+	require.ElementsMatch(t, files, retrievedFiles)
+
+	// Now remove file and check the remaining one.
+	ok, err := l.RemoveFile(scanID, emptyFile("/foo"))
+	require.True(t, ok)
+	retrievedFiles, err = l.GetFiles(scanID)
+	require.NoError(t, err)
+	require.Len(t, retrievedFiles, 1)
+	// Just /bar left
+	require.Equal(t, "/bar", retrievedFiles[0].GetMetadata().GetPath())
+}
+
+func emptyFile(path string) *pb.File {
+	// Note the creation of the datachunks, which is a bit testing internals :(
+	return &pb.File{Metadata: &mpb.FileMetadata{Path: path},
 		DataChunks: []*pb.DataChunk{
 			&pb.DataChunk{
 				Offset: 0,
 			},
 		},
-	})
-	l.AddFiles("a", files)
-	retrievedFiles, err = l.GetFiles("a")
-	require.NoError(t, err)
-	require.ElementsMatch(t, files, retrievedFiles)
+	}
 }
 
 func Test_LocalStateManager_storesAndRetrievesInterests(t *testing.T) {

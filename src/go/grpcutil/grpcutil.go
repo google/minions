@@ -50,7 +50,7 @@ func GetSslServerCreds(certPath string, keyPath string, caCertPath string) (grpc
 		creds = credentials.NewTLS(&tls.Config{
 			Certificates: []tls.Certificate{certificate},
 		})
-		return grpc.Creds(creds) nil
+		return grpc.Creds(creds), nil
 	}
 	cas := x509.NewCertPool()
 	ca, err := ioutil.ReadFile(caCertPath)

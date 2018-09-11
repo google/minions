@@ -16,12 +16,15 @@ package overlord
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/minions/go/overlord/interests"
 	"github.com/google/minions/go/overlord/state"
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
@@ -82,11 +85,15 @@ func New(ctx context.Context, minionAddresses []string, opts ...grpc.DialOption)
 	return server, nil
 }
 
+const minionInitDeadlineMs = 1000
+
 func getInterestsFromMinions(ctx context.Context, minions map[string]mpb.MinionClient) ([]*state.MappedInterest, error) {
 	var interests []*state.MappedInterest
 	for name, m := range minions {
-		// TODO(paradoxengine): most likely, a deadline here?
-		intResp, err := m.ListInitialInterests(ctx, &mpb.ListInitialInterestsRequest{})
+		// Note how we build a dedicated context for each request
+		deadlineCtx, cancel := context.WithTimeout(context.Background(), minionInitDeadlineMs*time.Millisecond)
+		defer cancel()
+		intResp, err := m.ListInitialInterests(deadlineCtx, &mpb.ListInitialInterestsRequest{})
 		if err != nil {
 			return nil, err
 		}
@@ -128,6 +135,9 @@ func (s *Server) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb
 // ListInterests returns the interests for a given scan, i.e. the files or metadata
 // that have to be fed to the Overlord for security scanning.
 func (s *Server) ListInterests(ctx context.Context, req *pb.ListInterestsRequest) (*pb.ListInterestsResponse, error) {
+	if ctx.Err() == context.Canceled {
+		return nil, status.Error(codes.Canceled, "Client cancelled, abandoning.")
+	}
 	if req.GetPageToken() != "" {
 		return nil, fmt.Errorf("token support is unimplemented")
 	}
@@ -149,6 +159,12 @@ func (s *Server) ListInterests(ctx context.Context, req *pb.ListInterestsRequest
 // ScanFiles runs security scan on a set of files, assuming they were actually
 // needed by the backend minions.
 func (s *Server) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.ScanFilesResponse, error) {
+	// First of all, check if the request is still valid. Due to queue,
+	// throttling or whatever else the client might have changed its mind.
+	if ctx.Err() == context.Canceled {
+		return nil, status.Error(codes.Canceled, "Client cancelled, abandoning.")
+	}
+
 	scanID := req.GetScanId()
 	if !s.stateManager.ScanExists(scanID) {
 		return nil, fmt.Errorf("unknown scan ID %s", scanID)

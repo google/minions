@@ -30,9 +30,15 @@ type Local struct {
 	lc *cache.Cache
 }
 
+// MappedInterest stores the interest along with the address of the minion which expressed it.
+type MappedInterest struct {
+	Interest *mpb.Interest
+	Minion   string
+}
+
 // state stores the current state of a scan
 type state struct {
-	interests []*mappedInterest
+	interests []*MappedInterest
 	files     map[string]*pb.File
 }
 
@@ -88,7 +94,7 @@ func (l *Local) AddFiles(scanID string, files []*pb.File) error {
 // if it already exists.
 func (l *Local) CreateScan(scanID string) error {
 	l.setState(scanID, state{
-		interests: make([]*mappedInterest, 0),
+		interests: make([]*MappedInterest, 0),
 		files:     make(map[string]*pb.File),
 	})
 	return nil
@@ -114,9 +120,9 @@ func (l *Local) RemoveFile(scanID string, file *pb.File) (bool, error) {
 // AddInterest adds a new interest for a given minion to the state of the scan.
 func (l *Local) AddInterest(scanID string, interest *mpb.Interest, minion string) error {
 	s, _ := l.getState(scanID)
-	s.interests = append(s.interests, &mappedInterest{
-		interest: interest,
-		minion:   minion,
+	s.interests = append(s.interests, &MappedInterest{
+		Interest: interest,
+		Minion:   minion,
 	})
 	l.setState(scanID, s)
 	return nil
@@ -142,7 +148,7 @@ func (l *Local) GetFiles(scanID string) ([]*pb.File, error) {
 }
 
 // GetInterests returns all the interests known for a given ScanID, mapped to minions
-func (l *Local) GetInterests(scanID string) ([]*mappedInterest, error) {
+func (l *Local) GetInterests(scanID string) ([]*MappedInterest, error) {
 	s, found := l.getState(scanID)
 	if !found {
 		return nil, errors.New("Scan does not exist")

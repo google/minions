@@ -30,14 +30,8 @@ import (
 // Server implements the OverlordServer interface, the orchestrator of Minions' infrastructure.
 type Server struct {
 	minions          map[string]mpb.MinionClient // The minions we know about and their address
-	initialInterests []*mappedInterest           // The initial interests all scans will get
+	initialInterests []*state.MappedInterest     // The initial interests all scans will get
 	stateManager     StateManager                // Manages local stage between scans.
-}
-
-// mappedInterest stores the interest along with the address of the minion which expressed it.
-type mappedInterest struct {
-	interest *mpb.Interest
-	minion   string
 }
 
 // StateManager handles the state of an Overlord through multiple
@@ -52,7 +46,7 @@ type StateManager interface {
 	// GetFiles returns all the files known for a given ScanID
 	GetFiles(scanID string) ([]*pb.File, error)
 	// GetInterests returns all the interests known for a given ScanID, mapped to minions
-	GetInterests(scanID string) ([]*mappedInterest, error)
+	GetInterests(scanID string) ([]*state.MappedInterest, error)
 	// RemoveFile atomically removes a given file from the state.
 	RemoveFile(scanID string, file *pb.File) (bool, error)
 	// ScanExists returns true if any state at all is known about the scan.
@@ -88,8 +82,8 @@ func New(ctx context.Context, minionAddresses []string, opts ...grpc.DialOption)
 	return server, nil
 }
 
-func getInterestsFromMinions(ctx context.Context, minions map[string]mpb.MinionClient) ([]*mappedInterest, error) {
-	var interests []*mappedInterest
+func getInterestsFromMinions(ctx context.Context, minions map[string]mpb.MinionClient) ([]*state.MappedInterest, error) {
+	var interests []*state.MappedInterest
 	for name, m := range minions {
 		// TODO(paradoxengine): most likely, a deadline here?
 		intResp, err := m.ListInitialInterests(ctx, &mpb.ListInitialInterestsRequest{})
@@ -97,9 +91,9 @@ func getInterestsFromMinions(ctx context.Context, minions map[string]mpb.MinionC
 			return nil, err
 		}
 		for _, v := range intResp.GetInterests() {
-			interests = append(interests, &mappedInterest{
-				interest: v,
-				minion:   name,
+			interests = append(interests, &state.MappedInterest{
+				Interest: v,
+				Minion:   name,
 			})
 		}
 	}
@@ -116,7 +110,7 @@ func (s *Server) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb
 
 	s.stateManager.CreateScan(scan.ScanId)
 	for _, i := range s.initialInterests {
-		s.stateManager.AddInterest(scan.ScanId, i.interest, i.minion)
+		s.stateManager.AddInterest(scan.ScanId, i.Interest, i.Minion)
 	}
 
 	knownInterests, err := s.stateManager.GetInterests(scan.ScanId)
@@ -124,7 +118,7 @@ func (s *Server) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb
 		return nil, err
 	}
 	for _, interest := range knownInterests {
-		scan.Interests = append(scan.Interests, interest.interest)
+		scan.Interests = append(scan.Interests, interest.Interest)
 	}
 	scan.Interests = interests.Minify(scan.Interests)
 
@@ -146,7 +140,7 @@ func (s *Server) ListInterests(ctx context.Context, req *pb.ListInterestsRequest
 	}
 	resp := &pb.ListInterestsResponse{}
 	for _, interest := range scanInterests {
-		resp.Interests = append(resp.Interests, interest.interest)
+		resp.Interests = append(resp.Interests, interest.Interest)
 	}
 	resp.Interests = interests.Minify(resp.Interests)
 	return resp, nil
@@ -177,7 +171,7 @@ func (s *Server) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.S
 			return nil, err
 		}
 		for _, candidate := range interestsForMinions {
-			if match, err := interests.IsMatching(candidate.interest, f); err != nil {
+			if match, err := interests.IsMatching(candidate.Interest, f); err != nil {
 				return nil, err
 			} else if !match {
 				continue
@@ -185,14 +179,14 @@ func (s *Server) ScanFiles(ctx context.Context, req *pb.ScanFilesRequest) (*pb.S
 
 			isComplete := f.GetMetadata().GetSize() == int64(len(f.GetDataChunks()[0].GetData()))
 
-			if candidate.interest.DataType == mpb.Interest_METADATA_AND_DATA && isComplete {
-				routedFiles[candidate.minion] = append(routedFiles[candidate.minion], &mpb.File{
+			if candidate.Interest.DataType == mpb.Interest_METADATA_AND_DATA && isComplete {
+				routedFiles[candidate.Minion] = append(routedFiles[candidate.Minion], &mpb.File{
 					Metadata: f.GetMetadata(),
 					Data:     f.GetDataChunks()[0].GetData(), // Note we accumulate in the first chunk.
 				})
-			} else if candidate.interest.DataType == mpb.Interest_METADATA {
+			} else if candidate.Interest.DataType == mpb.Interest_METADATA {
 				// Send only metadata.
-				routedFiles[candidate.minion] = append(routedFiles[candidate.minion], &mpb.File{
+				routedFiles[candidate.Minion] = append(routedFiles[candidate.Minion], &mpb.File{
 					Metadata: f.GetMetadata(),
 				})
 			}

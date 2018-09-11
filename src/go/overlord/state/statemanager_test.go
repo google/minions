@@ -85,15 +85,15 @@ func Test_Local_storesAndRetrievesInterests(t *testing.T) {
 	l.AddInterest("a", interest, "minion")
 	retrievedInterests, err := l.GetInterests("a")
 	require.NoError(t, err)
-	require.Equal(t, interest, retrievedInterests[0].interest)
+	require.Equal(t, interest, retrievedInterests[0].Interest)
 
 	interest2 := &mpb.Interest{DataType: mpb.Interest_METADATA_AND_DATA, PathRegexp: "foo2"}
 	l.AddInterest("a", interest2, "minion2")
 	retrievedInterests, err = l.GetInterests("a")
 	expectedInterests := []*mpb.Interest{interest, interest2}
 	actualInterests := make([]*mpb.Interest, 2)
-	actualInterests[0] = retrievedInterests[0].interest
-	actualInterests[1] = retrievedInterests[1].interest
+	actualInterests[0] = retrievedInterests[0].Interest
+	actualInterests[1] = retrievedInterests[1].Interest
 	require.NoError(t, err)
 	require.ElementsMatch(t, expectedInterests, actualInterests)
 }

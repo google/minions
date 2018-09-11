@@ -50,23 +50,23 @@ func GetSslServerCreds(certPath string, keyPath string, caCertPath string) (grpc
 		creds = credentials.NewTLS(&tls.Config{
 			Certificates: []tls.Certificate{certificate},
 		})
-	} else {
-		cas := x509.NewCertPool()
-		ca, err := ioutil.ReadFile(caCertPath)
-		if err != nil {
-			return nil, err
-		}
-		if ok := cas.AppendCertsFromPEM(ca); !ok {
-			return nil, errors.New("failed while creating CA pool for client verification. Check the CA cert")
-		}
-
-		log.Println("CA set and configured, enforcing client authentication")
-		creds = credentials.NewTLS(&tls.Config{
-			Certificates: []tls.Certificate{certificate},
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			ClientCAs:    cas,
-		})
+		return grpc.Creds(creds) nil
 	}
+	cas := x509.NewCertPool()
+	ca, err := ioutil.ReadFile(caCertPath)
+	if err != nil {
+		return nil, err
+	}
+	if ok := cas.AppendCertsFromPEM(ca); !ok {
+		return nil, errors.New("failed while creating CA pool for client verification. Check the CA cert")
+	}
+
+	log.Println("CA set and configured, enforcing client authentication")
+	creds = credentials.NewTLS(&tls.Config{
+		Certificates: []tls.Certificate{certificate},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    cas,
+	})
 	return grpc.Creds(creds), nil
 }
 

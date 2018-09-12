@@ -16,6 +16,7 @@ package overlord
 import (
 	"testing"
 
+	"github.com/google/minions/go/overlord/state"
 	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 	"golang.org/x/net/context"
@@ -38,8 +39,8 @@ func Test_CreateScanAndListInterests_returnsInitialInterests(t *testing.T) {
 		DataType:   mpb.Interest_METADATA_AND_DATA,
 		PathRegexp: "/some/regexp",
 	}
-	interests := []*mappedInterest{
-		&mappedInterest{interest, "fake_minion"},
+	interests := []*state.MappedInterest{
+		&state.MappedInterest{interest, "fake_minion"},
 	}
 	s, err := New(context.Background(), nil, "")
 	require.NoError(t, err)
@@ -73,7 +74,7 @@ func Test_INTERNAL_queriesMinions(t *testing.T) {
 	minionClients["fakeMinion"] = fm
 	retrievedInterests, err := getInterestsFromMinions(context.Background(), minionClients)
 	require.NoError(t, err)
-	require.Equal(t, retrievedInterests[0].interest, i)
+	require.Equal(t, retrievedInterests[0].Interest, i)
 }
 
 type fakeMinionClient struct {
@@ -87,6 +88,6 @@ func (m *fakeMinionClient) AnalyzeFiles(ctx context.Context, req *mpb.AnalyzeFil
 	return nil, nil
 }
 
-// TOOD(paradoxengine): the overlord still needs plenty of unit tests
+// TODO: the overlord still needs plenty of unit tests
 // Cases that are untested: rebuilding chunks, routing results to minion,
 // state building through additional interests.

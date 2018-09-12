@@ -15,6 +15,7 @@
 package goblins
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"log"
@@ -22,20 +23,21 @@ import (
 	"path/filepath"
 	"regexp"
 	"syscall"
+	"time"
 
 	"github.com/google/minions/go/overlord/interests"
-	minions "github.com/google/minions/proto/minions"
+	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 )
 
-// LoadFiles builds the File protos for a slice of interests in chunks,
+// loadFiles builds the File protos for a slice of interests in chunks,
 // topping at maximum size and files count. Note we do not support
 // content regexps at this point (i.e. we do not check file contents).
-func LoadFiles(intrs []*minions.Interest, maxKb int, maxFiles int, root string) ([][]*pb.File, error) {
+func loadFiles(intrs []*mpb.Interest, maxKb int, maxFiles int, root string) ([][]*pb.File, error) {
 	// Defensively minify the interests: this should have already happened but better safe than sorry.
 	intrs = interests.Minify(intrs)
 
-	paths := make(map[string]minions.Interest_DataType)
+	paths := make(map[string]mpb.Interest_DataType)
 	// Note we assume a unix filesystem here. Might want to revisit.
 	err := filepath.Walk(root, func(path string, f os.FileInfo, e error) error {
 
@@ -83,9 +85,9 @@ func LoadFiles(intrs []*minions.Interest, maxKb int, maxFiles int, root string) 
 		}
 		f := &pb.File{Metadata: metadata, DataChunks: nil}
 		switch dataType {
-		case minions.Interest_METADATA:
+		case mpb.Interest_METADATA:
 			break
-		case minions.Interest_METADATA_AND_DATA:
+		case mpb.Interest_METADATA_AND_DATA:
 			chunks, err := getDataChunks(path)
 			if err != nil {
 				if os.IsPermission(err) {
@@ -110,7 +112,7 @@ func LoadFiles(intrs []*minions.Interest, maxKb int, maxFiles int, root string) 
 // getMetadata is heavily linux skewed, but so is minions right now.
 // It's fairly easy to port to windows by adding the appropriate data
 // structure, but not planned for now.
-func getMetadata(path string) (*minions.FileMetadata, error) {
+func getMetadata(path string) (*mpb.FileMetadata, error) {
 	s, err := os.Stat(path)
 	if err != nil {
 		// I suspect this is too aggressive, as this can fail for a number
@@ -123,7 +125,7 @@ func getMetadata(path string) (*minions.FileMetadata, error) {
 		return nil, errors.New("cannot access OS-specific metadata")
 	}
 
-	m := &minions.FileMetadata{Path: path}
+	m := &mpb.FileMetadata{Path: path}
 	// TODO(paradoxengine): these conversions are all over the place :-(
 	m.OwnerUid = int32(sys.(*syscall.Stat_t).Uid)
 	m.OwnerGid = int32(sys.(*syscall.Stat_t).Gid)
@@ -156,4 +158,39 @@ func getDataChunks(path string) ([]*pb.DataChunk, error) {
 		})
 	}
 	return chunks, nil
+}
+
+// SendFiles iteratively sends files drawing them from the rootpath,
+// using the provided Overlord client.
+func SendFiles(client pb.OverlordClient, scanID string, interests []*mpb.Interest, rootPath string) ([]*mpb.Finding, error) {
+	var results []*mpb.Finding
+	// TODO: handle max files and bytes per request limits
+	files, err := loadFiles(interests, 0, 0, rootPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fs := range files {
+		for _, ff := range fs {
+			log.Printf("Sending file %s", ff.GetMetadata().GetPath())
+		}
+		sfr := &pb.ScanFilesRequest{ScanId: scanID, Files: fs}
+		ctx, _ := context.WithTimeout(context.Background(), 60*time.Second)
+		resp, err := client.ScanFiles(ctx, sfr)
+		log.Printf("Files sent. Response: %v", resp)
+		if err != nil {
+			return nil, err
+		}
+		// Iterate on new interests
+		if len(resp.GetNewInterests()) > 0 {
+			log.Printf("Got new interests!")
+			r, err := SendFiles(client, scanID, resp.GetNewInterests(), rootPath)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, r...)
+		}
+		results = append(results, resp.GetResults()...)
+	}
+	return results, nil
 }

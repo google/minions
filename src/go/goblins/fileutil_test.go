@@ -28,7 +28,7 @@ func TestParsesFiles_onFilesPresent_selectsFiles(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	i := &minions.Interest{DataType: minions.Interest_METADATA, PathRegexp: ".*\\.tmp"}
-	files, err := LoadFiles([]*minions.Interest{i}, 10000, 1000, dir)
+	files, err := loadFiles([]*minions.Interest{i}, 10000, 1000, dir)
 	require.NoError(t, err)
 	p := files[0][0].GetMetadata().GetPath()
 	require.Equal(t, dir+"/foo/bar/temp.tmp", p)
@@ -43,7 +43,7 @@ func TestParsesFiles_onSelectedFileUnaccessible_doesNotCrash(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	i := &minions.Interest{DataType: minions.Interest_METADATA_AND_DATA, PathRegexp: ".*\\.tmp"}
-	files, err := LoadFiles([]*minions.Interest{i}, 10000, 1000, dir)
+	files, err := loadFiles([]*minions.Interest{i}, 10000, 1000, dir)
 	require.NoError(t, err)
 	// Expect that will will skip, with no errors.
 	require.Empty(t, files[0])
@@ -62,7 +62,7 @@ func TestParsesFiles_onMultipleInterests_selectsFiles(t *testing.T) {
 	i := &minions.Interest{DataType: minions.Interest_METADATA, PathRegexp: ".*\\.tmp"}
 	i2 := &minions.Interest{DataType: minions.Interest_METADATA, PathRegexp: ".*\\.foo"}
 
-	files, err := LoadFiles([]*minions.Interest{i, i2}, 10000, 1000, dir)
+	files, err := loadFiles([]*minions.Interest{i, i2}, 10000, 1000, dir)
 	require.NoError(t, err)
 
 	expectedFiles := []string{dir + "/foo/bar/temp.foo", dir + "/foo/bar/temp.tmp"}
@@ -76,7 +76,7 @@ func TestParsesFiles_onFilesPresent_getsMetadata(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	i := &minions.Interest{DataType: minions.Interest_METADATA, PathRegexp: ".*\\.tmp"}
-	files, err := LoadFiles([]*minions.Interest{i}, 10000, 1000, dir)
+	files, err := loadFiles([]*minions.Interest{i}, 10000, 1000, dir)
 	require.NoError(t, err)
 	p := files[0][0].GetMetadata().GetPermissions()
 
@@ -93,7 +93,7 @@ func TestParsesFiles_onFilesPresent_readsContents(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	i := &minions.Interest{DataType: minions.Interest_METADATA_AND_DATA, PathRegexp: ".*\\.tmp"}
-	files, err := LoadFiles([]*minions.Interest{i}, 10000, 1000, dir)
+	files, err := loadFiles([]*minions.Interest{i}, 10000, 1000, dir)
 	require.NoError(t, err)
 	chunks := files[0][0].GetDataChunks()
 	data := chunks[0].GetData()
@@ -106,7 +106,7 @@ func TestParsesFiles_onFilesMissing_doesNotSelectFiles(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	i := &minions.Interest{DataType: minions.Interest_METADATA, PathRegexp: ".*\\.val2"}
-	files, err := LoadFiles([]*minions.Interest{i}, 10000, 1000, dir)
+	files, err := loadFiles([]*minions.Interest{i}, 10000, 1000, dir)
 	require.NoError(t, err)
 	// Sadly empty does not really support 2 dimensional slices.
 	require.Empty(t, files[0])

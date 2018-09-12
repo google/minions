@@ -16,10 +16,12 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"time"
 
 	"github.com/google/minions/go/goblins"
+	"github.com/google/minions/go/goblins/docker"
 	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 	"golang.org/x/net/context"
@@ -27,13 +29,14 @@ import (
 )
 
 var (
-	overlordAddr   = flag.String("overlord_addr", "127.0.0.1:10000", "Overlord address in the format of host:port")
-	maxFilesPerReq = flag.Int("max_files_request", 10, "Maximum number of files sent for each ScanFiles RPC")
-	maxKBPerReq    = flag.Int("max_kb_request", 1024, "Maximum KBs to be sent with each ScanFiles RPC")
-	rootPath       = flag.String("root_path", "/", "Root directory that we'll serve files from.")
+	overlordAddr  = flag.String("overlord_addr", "127.0.0.1:10000", "Overlord address in the format of host:port")
+	dockerPath    = flag.String("docker_path", "/var/lib/docker", "Docker directory")
+	dockerVersion = flag.Int("docker_version", 2, "Version of Docker - 1 or 2")
+	containerID   = flag.String("container_id", "", "ID of the Docker container to scan")
+	driver        = flag.String("storage_driver", "overlay2", "Storage driver to use: aufs, overlay, overlay2")
 )
 
-func startScan(client pb.OverlordClient) []*mpb.Finding {
+func startScan(client pb.OverlordClient, mountPath string) []*mpb.Finding {
 	log.Printf("Connecting to server")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -45,7 +48,7 @@ func startScan(client pb.OverlordClient) []*mpb.Finding {
 	log.Printf("Created scan %s", scanID)
 	log.Printf("Will now send files for each interests, a bit at a time")
 
-	results, err := sendFiles(client, scanID, response.GetInterests())
+	results, err := goblins.SendFiles(client, scanID, response.GetInterests(), mountPath)
 	if err != nil {
 		log.Fatalf("SendFiles %v", err)
 	}
@@ -53,42 +56,22 @@ func startScan(client pb.OverlordClient) []*mpb.Finding {
 	return results
 }
 
-func sendFiles(client pb.OverlordClient, scanID string, interests []*mpb.Interest) ([]*mpb.Finding, error) {
-	var results []*mpb.Finding
-	files, err := goblins.LoadFiles(interests, *maxKBPerReq, *maxFilesPerReq, *rootPath)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, fs := range files {
-		for _, ff := range fs {
-			log.Printf("Sending file %s", ff.GetMetadata().GetPath())
-		}
-		sfr := &pb.ScanFilesRequest{ScanId: scanID, Files: fs}
-		ctx, _ := context.WithTimeout(context.Background(), 60*time.Second)
-		resp, err := client.ScanFiles(ctx, sfr)
-		log.Printf("Files sent. Response: %v", resp)
-		if err != nil {
-			return nil, err
-		}
-		// Iterate on new interests
-		if len(resp.GetNewInterests()) > 0 {
-			log.Printf("Got new interests!")
-			r, err := sendFiles(client, scanID, resp.GetNewInterests())
-			if err != nil {
-				return nil, err
-			}
-			results = append(results, r...)
-		}
-		results = append(results, resp.GetResults()...)
-	}
-	return results, nil
-}
-
 func main() {
 	flag.Parse()
-	// check flag validity
-	// create temp dir.
+	// check flags validity
+
+	// Create a temp dir to mount image/container in.
+	mountPath, err := ioutil.TempDir("", "DOCKER_MINION")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// TODO: add a removeall, but should probably make sure we don't have weird symlinks/dir is empty
+	///	defer os.RemoveAll(mountPath) // clean up	docker mount point.
+
+	// Now mount the container.
+	docker.Mount(mountPath, *dockerPath, *dockerVersion, *containerID, *driver)
+	// TODO: defer docker.Umount() - make sure to push into defer stack.
 
 	conn, err := grpc.Dial(*overlordAddr, grpc.WithInsecure())
 	if err != nil {
@@ -97,7 +80,7 @@ func main() {
 	defer conn.Close()
 	client := pb.NewOverlordClient(conn)
 
-	results := startScan(client)
+	results := startScan(client, mountPath)
 
 	if len(results) == 0 {
 		log.Println("Scan completed but got no vulnerabilities back. Good! Maybe.")

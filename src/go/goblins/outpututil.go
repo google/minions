@@ -30,8 +30,10 @@ func HumanReadableDebug(results []*mpb.Finding) string {
 		fmt.Fprintf(&b, "%s : %s\n",
 			r.GetAdvisory().GetReference(), r.GetAdvisory().GetDescription())
 		fmt.Fprintf(&b, "Detected by %s\n", r.GetSource().GetMinion())
-		fmt.Fprintf(&b, "Resource: %s [%s]",
-			r.GetVulnerableResources()[0].GetPath(), r.GetVulnerableResources()[0].GetAdditionalInfo())
+		if len(r.GetVulnerableResources()) > 0 {
+			res := r.GetVulnerableResources()[0]
+			fmt.Fprintf(&b, "Resource: %s [%s]", res.GetPath(), res.GetAdditionalInfo())
+		}
 		fmt.Fprintf(&b, "Severity: %s\n", r.GetSeverity())
 	}
 	return b.String()

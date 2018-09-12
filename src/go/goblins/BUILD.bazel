@@ -1,12 +1,12 @@
 # Goblins are the file-loaders feeding data to the overlord.
 
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
     srcs = [
-        "common.go",
-        "local_goblin.go",
+        "fileutil.go",
+        "outpututil.go",
     ],
     importpath = "github.com/google/minions/go/goblins",
     visibility = ["//visibility:public"],
@@ -14,21 +14,13 @@ go_library(
         "//go/overlord/interests:go_default_library",
         "//proto/minions:go_default_library",
         "//proto/overlord:go_default_library",
-        "@org_golang_google_grpc//:go_default_library",
-        "@org_golang_x_net//context:go_default_library",
     ],
-)
-
-go_binary(
-    name = "goblins",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["common_test.go"],
+    srcs = ["fileutil_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//proto/minions:go_default_library",

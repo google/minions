@@ -18,6 +18,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/minions/go/goblins"
 	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 	"golang.org/x/net/context"
@@ -54,7 +55,7 @@ func startScan(client pb.OverlordClient) []*mpb.Finding {
 
 func sendFiles(client pb.OverlordClient, scanID string, interests []*mpb.Interest) ([]*mpb.Finding, error) {
 	var results []*mpb.Finding
-	files, err := loadFiles(interests, *maxKBPerReq, *maxFilesPerReq, *rootPath)
+	files, err := goblins.LoadFiles(interests, *maxKBPerReq, *maxFilesPerReq, *rootPath)
 	if err != nil {
 		return nil, err
 	}
@@ -98,14 +99,5 @@ func main() {
 	if len(results) == 0 {
 		log.Println("Scan completed but got no vulnerabilities back. Good! Maybe.")
 	}
-
-	for _, r := range results {
-		log.Println("-----------------")
-		log.Printf("%s : %s\n",
-			r.GetAdvisory().GetReference(), r.GetAdvisory().GetDescription())
-		log.Printf("Detected by %s\n", r.GetSource().GetMinion())
-		log.Printf("Resource: %s [%s]",
-			r.GetVulnerableResources()[0].GetPath(), r.GetVulnerableResources()[0].GetAdditionalInfo())
-		log.Printf("Severity: %s\n", r.GetSeverity())
-	}
+	log.Println(goblins.HumanReadableDebug(results))
 }

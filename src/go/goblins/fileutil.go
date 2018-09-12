@@ -11,7 +11,8 @@
 //  See the License for the specific language governing permissions and
 //	limitations under the License.
 
-package main
+// Package goblins contains common code across Goblins
+package goblins
 
 import (
 	"errors"
@@ -27,10 +28,10 @@ import (
 	pb "github.com/google/minions/proto/overlord"
 )
 
-// loadFiles builds the File protos for a slice of interests in chunks,
+// LoadFiles builds the File protos for a slice of interests in chunks,
 // topping at maximum size and files count. Note we do not support
 // content regexps at this point (i.e. we do not check file contents).
-func loadFiles(intrs []*minions.Interest, maxKb int, maxFiles int, root string) ([][]*pb.File, error) {
+func LoadFiles(intrs []*minions.Interest, maxKb int, maxFiles int, root string) ([][]*pb.File, error) {
 	// Defensively minify the interests: this should have already happened but better safe than sorry.
 	intrs = interests.Minify(intrs)
 

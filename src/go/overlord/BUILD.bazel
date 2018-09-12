@@ -22,6 +22,7 @@ go_test(
     srcs = ["overlord_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//go/overlord/state:go_default_library",
         "//proto/minions:go_default_library",
         "//proto/overlord:go_default_library",
         "@com_github_stretchr_testify//require:go_default_library",

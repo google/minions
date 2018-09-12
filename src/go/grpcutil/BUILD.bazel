@@ -13,6 +13,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["grpcutil_test.go"],
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],

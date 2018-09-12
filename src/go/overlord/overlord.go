@@ -16,10 +16,9 @@ package overlord
 import (
 	"fmt"
 	"log"
-	"sort"
 	"strings"
 
-  "github.com/google/minions/go/grpcutil"
+	"github.com/google/minions/go/grpcutil"
 	"github.com/google/minions/go/overlord/interests"
 	"github.com/google/minions/go/overlord/state"
 	"github.com/google/uuid"

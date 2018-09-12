@@ -15,9 +15,11 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
+	"github.com/google/minions/go/grpcutil"
 	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 	"golang.org/x/net/context"
@@ -25,7 +27,9 @@ import (
 )
 
 var (
-	overlordAddr   = flag.String("overlord_addr", "127.0.0.1:10000", "Overlord address in the format of host:port")
+	caCert         = flag.String("ca_cert", "", "Path to the Certificate authority certificate used to validate Overlord certificates")
+	overlordAddr   = flag.String("overlord_host", "127.0.0.1", "Overlord hostnames")
+	overlordPort   = flag.Int("overlord_port", 10000, "Port where the overlord runs")
 	maxFilesPerReq = flag.Int("max_files_request", 10, "Maximum number of files sent for each ScanFiles RPC")
 	maxKBPerReq    = flag.Int("max_kb_request", 1024, "Maximum KBs to be sent with each ScanFiles RPC")
 	rootPath       = flag.String("root_path", "/", "Root directory that we'll serve files from.")
@@ -86,7 +90,11 @@ func sendFiles(client pb.OverlordClient, scanID string, interests []*mpb.Interes
 
 func main() {
 	flag.Parse()
-	conn, err := grpc.Dial(*overlordAddr, grpc.WithInsecure())
+	opts, err := grpcutil.GetSslClientOptions(*overlordAddr, *caCert)
+	if err != nil {
+		log.Fatalf("cannot set up SSL options: %v", err)
+	}
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", *overlordAddr, *overlordPort), opts)
 	if err != nil {
 		log.Fatalf("fail to dial: %v", err)
 	}

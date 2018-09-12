@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_CreateScan_returnsUuid(t *testing.T) {
+func TestCreateScanReturnsUuid(t *testing.T) {
 	s, err := New(context.Background(), nil)
 	require.NoError(t, err)
 
@@ -33,7 +33,7 @@ func Test_CreateScan_returnsUuid(t *testing.T) {
 	require.NotEmpty(t, resp.GetScanId())
 }
 
-func Test_CreateScanAndListInterests_returnsInitialInterests(t *testing.T) {
+func TestCreateScanAndListInterestsReturnsInitialInterests(t *testing.T) {
 	interest := &mpb.Interest{
 		DataType:   mpb.Interest_METADATA_AND_DATA,
 		PathRegexp: "/some/regexp",
@@ -62,7 +62,7 @@ func Test_CreateScanAndListInterests_returnsInitialInterests(t *testing.T) {
 	require.Contains(t, r.GetInterests(), interest)
 }
 
-func Test_INTERNAL_queriesMinions(t *testing.T) {
+func TestInternalBehaviorQueriesMinions(t *testing.T) {
 	i := &mpb.Interest{
 		DataType:   mpb.Interest_METADATA_AND_DATA,
 		PathRegexp: "/irrelevant",

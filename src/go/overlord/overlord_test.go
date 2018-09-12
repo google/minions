@@ -25,7 +25,7 @@ import (
 )
 
 func TestCreateScanReturnsUuid(t *testing.T) {
-	s, err := New(context.Background(), nil)
+	s, err := New(context.Background(), nil, "")
 	require.NoError(t, err)
 
 	resp, err := s.CreateScan(context.Background(), nil)
@@ -41,7 +41,7 @@ func TestCreateScanAndListInterestsReturnsInitialInterests(t *testing.T) {
 	interests := []*mappedInterest{
 		&mappedInterest{interest, "fake_minion"},
 	}
-	s, err := New(context.Background(), nil)
+	s, err := New(context.Background(), nil, "")
 	require.NoError(t, err)
 
 	// Hard-plugging some initial interests in the overlord.

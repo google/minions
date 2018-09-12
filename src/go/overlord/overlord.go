@@ -17,7 +17,9 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 
+	"github.com/google/minions/go/grpcutil"
 	"github.com/google/minions/go/overlord/interests"
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
@@ -82,8 +84,9 @@ func (s *state) add(files []*pb.File) error {
 }
 
 // New returns an initialized Server, which connects to a set of pre-specified minions
-// to initialize them.
-func New(ctx context.Context, minionAddresses []string, opts ...grpc.DialOption) (*Server, error) {
+// to initialize them. It accepts the path of a CA certificate to use to check the
+// minions server certs
+func New(ctx context.Context, minionAddresses []string, caCertPath string) (*Server, error) {
 	server := &Server{
 		minions: make(map[string]mpb.MinionClient),
 		scans:   make(map[string]state),
@@ -92,8 +95,13 @@ func New(ctx context.Context, minionAddresses []string, opts ...grpc.DialOption)
 	log.Println("Reaching out to all minions.")
 	// Build map of minions.
 	for _, addr := range minionAddresses {
-		log.Printf("Contacting %s\n", addr)
-		c, err := grpc.Dial(addr, opts...)
+		log.Printf("Reaching out to minion at %s\n", addr)
+		host := strings.Split(addr, ":")[0] // If we have a port, extract hostname
+		opts, err := grpcutil.GetSslClientOptions(host, caCertPath)
+		if err != nil {
+			return nil, err
+		}
+		c, err := grpc.Dial(addr, opts)
 		if err != nil {
 			return nil, err
 		}

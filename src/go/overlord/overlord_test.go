@@ -34,6 +34,25 @@ func TestCreateScanReturnsUuid(t *testing.T) {
 	require.NotEmpty(t, resp.GetScanId())
 }
 
+func TestAllRpcsReturnCanceledOnCanceledComtext(t *testing.T) {
+	s, err := New(context.Background(), nil, "")
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	type helperFunc func(context.Context) error
+
+	funcTests := []helperFunc{
+		func(ctx context.Context) error { _, err := s.CreateScan(ctx, nil); return err },
+		func(ctx context.Context) error { _, err := s.ListInterests(ctx, nil); return err },
+		func(ctx context.Context) error { _, err := s.ScanFiles(ctx, nil); return err },
+	}
+	for _, f := range funcTests {
+		err := f(ctx)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "code = Canceled")
+	}
+}
+
 func TestCreateScanAndListInterestsReturnsInitialInterests(t *testing.T) {
 	interest := &mpb.Interest{
 		DataType:   mpb.Interest_METADATA_AND_DATA,

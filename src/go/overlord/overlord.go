@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
-  "time"
+	"time"
 
 	"github.com/google/minions/go/grpcutil"
 	"github.com/google/minions/go/overlord/interests"
@@ -119,6 +119,9 @@ func getInterestsFromMinions(ctx context.Context, minions map[string]mpb.MinionC
 // It returns a UUID identifying the scan from now on and the list of initial
 // Interests.
 func (s *Server) CreateScan(ctx context.Context, req *pb.CreateScanRequest) (*pb.Scan, error) {
+	if ctx.Err() == context.Canceled {
+		return nil, status.Error(codes.Canceled, "Client cancelled, abandoning.")
+	}
 	// Scans are tracked by UUID, so let's start by generating it.
 	scan := &pb.Scan{}
 	scan.ScanId = uuid.New().String()

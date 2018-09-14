@@ -67,7 +67,7 @@ func New(ctx context.Context, minionAddresses []string, caCertPath string) (*Ser
 		stateManager: state.NewLocal(),
 	}
 
-	log.Println("Reaching out to all minions.")
+	log.Printf("Reaching out to all minions. Got %d from flags\n", len(minionAddresses))
 	// Build map of minions.
 	for _, addr := range minionAddresses {
 		log.Printf("Reaching out to minion at %s\n", addr)
@@ -101,6 +101,7 @@ func getInterestsFromMinions(ctx context.Context, minions map[string]mpb.MinionC
 		// Note how we build a dedicated context for each request
 		deadlineCtx, cancel := context.WithTimeout(context.Background(), minionInitDeadlineMs*time.Millisecond)
 		defer cancel()
+		log.Printf("Fetching initial interests from %s\n", name)
 		intResp, err := m.ListInitialInterests(deadlineCtx, &mpb.ListInitialInterestsRequest{})
 		if err != nil {
 			return nil, err

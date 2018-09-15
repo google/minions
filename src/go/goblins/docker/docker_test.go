@@ -19,14 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLocalTest(t *testing.T) {
-	mountDir := "/tmp/foo"
-	dockerDir := "/var/lib/docker"
-	dockerVersion := 2
-	containerID := "45ce89d200dd7a0e4aae5fd063471ecc0cbc2cf6b01a785bd4ff03d9c93afcdf"
-	driver := "overlay2"
-	err := Mount(mountDir, dockerDir, dockerVersion, containerID, driver)
-	require.NoError(t, err)
-	err = Umount(mountDir)
-	require.NoError(t, err)
+func TestUmountError(t *testing.T) {
+	err := Umount("/DoesNoTExists")
+	require.Error(t, err)
 }

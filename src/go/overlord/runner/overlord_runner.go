@@ -22,6 +22,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/google/minions/go/grpcutil"
 	"github.com/google/minions/go/overlord"
 	pb "github.com/google/minions/proto/overlord"
 	"google.golang.org/grpc"
@@ -41,12 +42,14 @@ func (f *flagStrings) Set(value string) error {
 var (
 	minions flagStrings
 	port    = flag.Int("port", 10000, "Overlord server port")
+	sslCert = flag.String("ssl_cert", "", "Path to the SSL certificate (crt)")
+	sslKey  = flag.String("ssl_key", "", "Path to the SSL key (key)")
+	caCert  = flag.String("ca_cert", "", "Path to the Certificate Authority certificate used to validate Minions certificates")
 )
 
 func newServer() (*overlord.Server, error) {
 	ctx := context.Background()
-	// TODO(paradoxengine): Once TLS auth is impelemneted everywhere, remove the insecure flag.
-	return overlord.New(ctx, minions, grpc.WithInsecure())
+	return overlord.New(ctx, minions, *caCert)
 }
 
 func main() {
@@ -59,6 +62,15 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	var opts []grpc.ServerOption
+	creds, err := grpcutil.GetSslServerCreds(*sslCert, *sslKey, "") // We don't validate client certs.
+	if err != nil {
+		log.Fatalf("Failed to retrieve SSL creds: %v", err)
+	}
+	if creds == nil {
+		log.Println("WARNING: starting the Overlord with no SSL support")
+	} else {
+		opts = append(opts, creds)
+	}
 	grpcServer := grpc.NewServer(opts...)
 	s, err := newServer()
 	if err != nil {

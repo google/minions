@@ -16,6 +16,7 @@ package overlord
 import (
 	"testing"
 
+	"github.com/google/minions/go/overlord/state"
 	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 	"golang.org/x/net/context"
@@ -24,8 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_CreateScan_returnsUuid(t *testing.T) {
-	s, err := New(context.Background(), nil)
+func TestCreateScanReturnsUuid(t *testing.T) {
+	s, err := New(context.Background(), nil, "")
 	require.NoError(t, err)
 
 	resp, err := s.CreateScan(context.Background(), nil)
@@ -33,15 +34,15 @@ func Test_CreateScan_returnsUuid(t *testing.T) {
 	require.NotEmpty(t, resp.GetScanId())
 }
 
-func Test_CreateScanAndListInterests_returnsInitialInterests(t *testing.T) {
+func TestCreateScanAndListInterestsReturnsInitialInterests(t *testing.T) {
 	interest := &mpb.Interest{
 		DataType:   mpb.Interest_METADATA_AND_DATA,
 		PathRegexp: "/some/regexp",
 	}
-	interests := []*mappedInterest{
-		&mappedInterest{interest, "fake_minion"},
+	interests := []*state.MappedInterest{
+		&state.MappedInterest{interest, "fake_minion"},
 	}
-	s, err := New(context.Background(), nil)
+	s, err := New(context.Background(), nil, "")
 	require.NoError(t, err)
 
 	// Hard-plugging some initial interests in the overlord.
@@ -62,7 +63,7 @@ func Test_CreateScanAndListInterests_returnsInitialInterests(t *testing.T) {
 	require.Contains(t, r.GetInterests(), interest)
 }
 
-func Test_INTERNAL_queriesMinions(t *testing.T) {
+func TestInternalBehaviorQueriesMinions(t *testing.T) {
 	i := &mpb.Interest{
 		DataType:   mpb.Interest_METADATA_AND_DATA,
 		PathRegexp: "/irrelevant",
@@ -73,7 +74,7 @@ func Test_INTERNAL_queriesMinions(t *testing.T) {
 	minionClients["fakeMinion"] = fm
 	retrievedInterests, err := getInterestsFromMinions(context.Background(), minionClients)
 	require.NoError(t, err)
-	require.Equal(t, retrievedInterests[0].interest, i)
+	require.Equal(t, retrievedInterests[0].Interest, i)
 }
 
 type fakeMinionClient struct {
@@ -87,6 +88,6 @@ func (m *fakeMinionClient) AnalyzeFiles(ctx context.Context, req *mpb.AnalyzeFil
 	return nil, nil
 }
 
-// TOOD(paradoxengine): the overlord still needs plenty of unit tests
+// TODO: the overlord still needs plenty of unit tests
 // Cases that are untested: rebuilding chunks, routing results to minion,
 // state building through additional interests.

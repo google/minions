@@ -18,6 +18,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
+	"os"
 	"time"
 
 	"github.com/google/minions/go/goblins"
@@ -50,7 +51,7 @@ func startScan(client pb.OverlordClient, mountPath string) []*mpb.Finding {
 
 	results, err := goblins.SendFiles(client, scanID, response.GetInterests(), mountPath)
 	if err != nil {
-		log.Fatalf("SendFiles %v", err)
+		log.Fatalf("Failed sending files to the overlord: %v", err)
 	}
 	cancel()
 	return results
@@ -62,16 +63,20 @@ func main() {
 
 	// Create a temp dir to mount image/container in.
 	mountPath, err := ioutil.TempDir("", "DOCKER_MINION")
+	log.Printf("Will mount on %s", mountPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// TODO: add a removeall, but should probably make sure we don't have weird symlinks/dir is empty
-	///	defer os.RemoveAll(mountPath) // clean up	docker mount point.
+	// TODO: double check this removeall, but should probably make sure we don't have weird symlinks/dir is empty
+	defer os.RemoveAll(mountPath) // clean up	docker mount point.
 
 	// Now mount the container.
-	docker.Mount(mountPath, *dockerPath, *dockerVersion, *containerID, *driver)
-	// TODO: defer docker.Umount() - make sure to push into defer stack.
+	err = docker.Mount(mountPath, *dockerPath, *dockerVersion, *containerID, *driver)
+	if err != nil {
+		log.Fatalf("Failed to mount the docker container: %v", err)
+	}
+	defer docker.Umount(mountPath)
 
 	conn, err := grpc.Dial(*overlordAddr, grpc.WithInsecure())
 	if err != nil {

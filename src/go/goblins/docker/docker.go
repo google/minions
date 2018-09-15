@@ -105,7 +105,7 @@ func aufsMountCommands(mountDir string, rootDir string, mountID string, dockerDi
 	// Now mount all layers above.
 	files, err := ioutil.ReadDir(layersPath)
 	if err != nil {
-		return nil, fmt.Errorf("Error while building layers mount command: %v", err)
+		return nil, fmt.Errorf("Error while building layers mount command on layerspath %s: %v", layersPath, err)
 	}
 	for _, f := range files {
 		path := filepath.Join(dockerDir, storageMethod, "diff", f.Name())
@@ -188,4 +188,22 @@ func overlayFsMountCommands(mountDir string, mountID string, dockerDir string,
 	args := []string{"-toverlay", opts, "overlay", mountDir}
 	command := exec.Command("mount", args...)
 	return []*exec.Cmd{command}, nil
+}
+
+// Umount a path that has been previously mounted.
+// Note that since some of the filesystems mount
+// over and over the same path, we need to keep umount!
+func Umount(path string) error {
+	cmd := exec.Command("umount", path)
+	err := cmd.Run()
+	log.Printf("umount %s", path)
+	// The first time we should always umount.
+	if err != nil {
+		return nil
+	}
+	// Now keep umount till we hit an error (i.e. we are done)
+	for exec.Command("umount", path).Run() == nil {
+		log.Printf("still umounting %s", path)
+	}
+	return nil
 }

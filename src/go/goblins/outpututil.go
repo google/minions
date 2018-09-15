@@ -26,13 +26,13 @@ import (
 func HumanReadableDebug(results []*mpb.Finding) string {
 	var b strings.Builder
 	for _, r := range results {
-		b.WriteString("------------------------------")
+		b.WriteString("------------------------------\n")
 		fmt.Fprintf(&b, "%s : %s\n",
 			r.GetAdvisory().GetReference(), r.GetAdvisory().GetDescription())
 		fmt.Fprintf(&b, "Detected by %s\n", r.GetSource().GetMinion())
 		if len(r.GetVulnerableResources()) > 0 {
 			res := r.GetVulnerableResources()[0]
-			fmt.Fprintf(&b, "Resource: %s [%s]", res.GetPath(), res.GetAdditionalInfo())
+			fmt.Fprintf(&b, "Resource: %s [%s]\n", res.GetPath(), res.GetAdditionalInfo())
 		}
 		fmt.Fprintf(&b, "Severity: %s\n", r.GetSeverity())
 	}

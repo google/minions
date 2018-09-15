@@ -20,7 +20,10 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["fileutil_test.go"],
+    srcs = [
+        "fileutil_test.go",
+        "outpututil_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/minions:go_default_library",

@@ -27,4 +27,6 @@ func TestLocalTest(t *testing.T) {
 	driver := "overlay2"
 	err := Mount(mountDir, dockerDir, dockerVersion, containerID, driver)
 	require.NoError(t, err)
+	err = Umount(mountDir)
+	require.NoError(t, err)
 }

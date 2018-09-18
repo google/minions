@@ -199,7 +199,7 @@ func Umount(path string) error {
 	log.Printf("umount %s", path)
 	// The first time we should always umount.
 	if err != nil {
-		return nil
+		return err
 	}
 	// Now keep umount till we hit an error (i.e. we are done)
 	for exec.Command("umount", path).Run() == nil {

@@ -126,7 +126,7 @@ func aufsMountCommands(mountDir string, rootDir string, mountID string, dockerDi
 }
 
 func mountVolumesDocker1(mountDir string, rootDir string, volumes map[string]string) []*exec.Cmd {
-	commands := make([]*exec.Cmd, 0)
+	var commands []*exec.Cmd
 	for mountpoint, storage := range volumes {
 		storageIhp := strings.TrimLeft(mountpoint, string(os.PathSeparator))
 		mountpointIhp := strings.TrimLeft(storage, string(os.PathSeparator))
@@ -139,7 +139,7 @@ func mountVolumesDocker1(mountDir string, rootDir string, volumes map[string]str
 }
 
 func mountVolumesDocker2(mountDir string, mountPoints []storageInfo) []*exec.Cmd {
-	commands := make([]*exec.Cmd, 0)
+	var commands []*exec.Cmd
 	for _, s := range mountPoints {
 		srcMount := strings.TrimLeft(s.source, string(os.PathSeparator))
 		dstMount := strings.TrimLeft(s.destination, string(os.PathSeparator))
@@ -177,10 +177,10 @@ func overlayFsMountCommands(mountDir string, mountID string, dockerDir string,
 		// reconstruct full paths to all these layers.
 		// ie: from 'abcd:0123' to '/var/lib/docker/abcd:/var/lib/docker/0123'
 		var paths []string
-		for _, lc := range strings.Split(string(lowerContent), ":") {
+		for _, lc := range strings.Split(string(lowerContent), string(os.PathListSeparator)) {
 			paths = append(paths, filepath.Join(dockerDir, storageMethod, lc))
 		}
-		lowerDirPath = strings.Join(paths, ":")
+		lowerDirPath = strings.Join(paths, string(os.PathListSeparator))
 	}
 	upperDirPath := filepath.Join(mountIDPath, upperdirName)
 
@@ -201,9 +201,14 @@ func Umount(path string) error {
 	if err != nil {
 		return err
 	}
+	maxUmount := 500
+	log.Printf("Recursively umounting %s", path)
 	// Now keep umount till we hit an error (i.e. we are done)
-	for exec.Command("umount", path).Run() == nil {
-		log.Printf("still umounting %s", path)
+	for u := 0; exec.Command("umount", path).Run() == nil && u < maxUmount; u++ {
+		if u > maxUmount-2 {
+			return fmt.Errorf("Ok, I've umounted %s for %d times, giving up", path, maxUmount-2)
+		}
 	}
+	log.Printf("Completed umount")
 	return nil
 }

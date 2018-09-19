@@ -53,13 +53,12 @@ func startScan(client pb.OverlordClient, mountPath string) []*mpb.Finding {
 	if err != nil {
 		log.Fatalf("Failed sending files to the overlord: %v", err)
 	}
-	cancel()
 	return results
 }
 
 func main() {
 	flag.Parse()
-	// check flags validity
+	// TODO: check flags validity
 
 	// Create a temp dir to mount image/container in.
 	mountPath, err := ioutil.TempDir("", "DOCKER_MINION")
@@ -69,7 +68,7 @@ func main() {
 	}
 
 	// TODO: double check this removeall, but should probably make sure we don't have weird symlinks/dir is empty
-	defer os.RemoveAll(mountPath) // clean up	docker mount point.
+	defer os.RemoveAll(mountPath) // clean up dcker mount point.
 
 	// Now mount the container.
 	err = docker.Mount(mountPath, *dockerPath, *dockerVersion, *containerID, *driver)

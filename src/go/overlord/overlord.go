@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/google/minions/go/grpcutil"
-	"github.com/google/minions/go/overlord/interests"
+	"github.com/google/minions/go/interests"
 	"github.com/google/minions/go/overlord/state"
 	"github.com/google/uuid"
 	"golang.org/x/net/context"

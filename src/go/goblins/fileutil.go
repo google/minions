@@ -27,7 +27,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/minions/go/overlord/interests"
+	"github.com/google/minions/go/interests"
 	mpb "github.com/google/minions/proto/minions"
 	pb "github.com/google/minions/proto/overlord"
 )

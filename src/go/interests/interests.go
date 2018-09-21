@@ -51,7 +51,8 @@ func Minify(interests []*mpb.Interest) []*mpb.Interest {
 }
 
 // IsMatching checks if the File is matching the Interest.
-// Error is returned where the PathRegexp in the Interest is malformed.
+// Error is returned where the PathRegexp in the Interest is malformed or there is no
+// metadata.
 func IsMatching(interest *mpb.Interest, file *opb.File) (bool, error) {
 	if file.GetMetadata() == nil {
 		return false, fmt.Errorf("cannot match file without metadata")

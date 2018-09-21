@@ -68,7 +68,7 @@ func main() {
 	}
 
 	// TODO: double check this removeall, but should probably make sure we don't have weird symlinks/dir is empty
-	defer os.RemoveAll(mountPath) // clean up dcker mount point.
+	defer os.RemoveAll(mountPath) // clean up Docker mount point.
 
 	// Now mount the container.
 	err = docker.Mount(mountPath, *dockerPath, *dockerVersion, *containerID, *driver)

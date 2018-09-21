@@ -11,7 +11,7 @@
 //  See the License for the specific language governing permissions and
 //	limitations under the License.
 
-package main
+package goblins
 
 import (
 	"io/ioutil"
@@ -31,7 +31,8 @@ func TestParsesFiles_onFilesPresent_selectsFiles(t *testing.T) {
 	files, err := loadFiles([]*minions.Interest{i}, 10000, 1000, dir)
 	require.NoError(t, err)
 	p := files[0][0].GetMetadata().GetPath()
-	require.Equal(t, dir+"/foo/bar/temp.tmp", p)
+	// Note how the metadata of the files have the root removed.
+	require.Equal(t, "/foo/bar/temp.tmp", p)
 }
 
 func TestParsesFiles_onSelectedFileUnaccessible_doesNotCrash(t *testing.T) {
@@ -65,7 +66,7 @@ func TestParsesFiles_onMultipleInterests_selectsFiles(t *testing.T) {
 	files, err := loadFiles([]*minions.Interest{i, i2}, 10000, 1000, dir)
 	require.NoError(t, err)
 
-	expectedFiles := []string{dir + "/foo/bar/temp.foo", dir + "/foo/bar/temp.tmp"}
+	expectedFiles := []string{"/foo/bar/temp.foo", "/foo/bar/temp.tmp"}
 	require.Contains(t, expectedFiles, files[0][0].GetMetadata().GetPath())
 	require.Contains(t, expectedFiles, files[0][1].GetMetadata().GetPath())
 }

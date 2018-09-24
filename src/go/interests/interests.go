@@ -14,7 +14,7 @@
 package interests
 
 import (
-	"fmt"
+	"errors"
 	"regexp"
 
 	mpb "github.com/google/minions/proto/minions"
@@ -55,7 +55,7 @@ func Minify(interests []*mpb.Interest) []*mpb.Interest {
 // metadata.
 func IsMatching(interest *mpb.Interest, file *opb.File) (bool, error) {
 	if file.GetMetadata() == nil {
-		return false, fmt.Errorf("cannot match file without metadata")
+		return false, errors.New("cannot match file without metadata")
 	}
 	// If the path doesn't match or the matching returns an error.
 	if match, err := regexp.MatchString(interest.PathRegexp, file.GetMetadata().Path); err != nil || !match {

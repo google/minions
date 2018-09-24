@@ -59,53 +59,93 @@ var isMatchingV = []struct {
 	e     error
 	r     bool
 }{
-	{"empty_interest_file", &mpb.Interest{}, &opb.File{}, errors.New(""), false},
-	{"no_file_metadata", &mpb.Interest{
-		DataType:   mpb.Interest_METADATA_AND_DATA,
-		PathRegexp: "/",
-	}, &opb.File{}, errors.New(""), false},
-	{"brokenpath", &mpb.Interest{
-		DataType:   mpb.Interest_METADATA_AND_DATA,
-		PathRegexp: "[a-z{}",
-	}, &opb.File{
-		Metadata: &mpb.FileMetadata{
-			Path: "/foobar",
+	{
+		"empty_interest_file",
+		&mpb.Interest{},
+		&opb.File{},
+		errors.New(""),
+		false,
+	},
+	{
+		"no_file_metadata",
+		&mpb.Interest{
+			DataType:   mpb.Interest_METADATA_AND_DATA,
+			PathRegexp: "/",
 		},
-	}, errors.New(""), false},
-	{"path_matches_metadata", &mpb.Interest{
-		DataType:   mpb.Interest_METADATA,
-		PathRegexp: "/foobar",
-	}, &opb.File{
-		Metadata: &mpb.FileMetadata{
-			Path: "/foobar",
+		&opb.File{},
+		errors.New(""),
+		false,
+	},
+	{
+		"brokenpath",
+		&mpb.Interest{
+			DataType:   mpb.Interest_METADATA_AND_DATA,
+			PathRegexp: "[a-z{}",
 		},
-	}, nil, true},
-	{"path_matches_metadata_data", &mpb.Interest{
-		DataType:   mpb.Interest_METADATA_AND_DATA,
-		PathRegexp: "/foobar",
-	}, &opb.File{
-		Metadata: &mpb.FileMetadata{
-			Path: "/foobar",
+		&opb.File{
+			Metadata: &mpb.FileMetadata{
+				Path: "/foobar",
+			},
 		},
-		DataChunks: []*opb.DataChunk{&opb.DataChunk{}},
-	}, nil, true},
-	{"does_not_match", &mpb.Interest{
-		DataType:   mpb.Interest_METADATA_AND_DATA,
-		PathRegexp: "/somethingelse",
-	}, &opb.File{
-		Metadata: &mpb.FileMetadata{
-			Path: "/foobar",
+		errors.New(""),
+		false,
+	},
+	{
+		"path_matches_metadata",
+		&mpb.Interest{
+			DataType:   mpb.Interest_METADATA,
+			PathRegexp: "/foobar",
 		},
-		DataChunks: []*opb.DataChunk{&opb.DataChunk{}},
-	}, nil, false},
-	{"does_not_match_on_no_data", &mpb.Interest{
-		DataType:   mpb.Interest_METADATA_AND_DATA,
-		PathRegexp: "/foobar",
-	}, &opb.File{
-		Metadata: &mpb.FileMetadata{
-			Path: "/foobar",
+		&opb.File{
+			Metadata: &mpb.FileMetadata{
+				Path: "/foobar",
+			},
 		},
-	}, nil, false},
+		nil,
+		true},
+	{
+		"path_matches_metadata_data",
+		&mpb.Interest{
+			DataType:   mpb.Interest_METADATA_AND_DATA,
+			PathRegexp: "/foobar",
+		},
+		&opb.File{
+			Metadata: &mpb.FileMetadata{
+				Path: "/foobar",
+			},
+			DataChunks: []*opb.DataChunk{&opb.DataChunk{}},
+		},
+		nil,
+		true,
+	},
+	{
+		"does_not_match",
+		&mpb.Interest{
+			DataType:   mpb.Interest_METADATA_AND_DATA,
+			PathRegexp: "/somethingelse",
+		},
+		&opb.File{
+			Metadata: &mpb.FileMetadata{
+				Path: "/foobar",
+			},
+			DataChunks: []*opb.DataChunk{&opb.DataChunk{}},
+		},
+		nil,
+		false,
+	},
+	{
+		"does_not_match_on_no_data",
+		&mpb.Interest{
+			DataType:   mpb.Interest_METADATA_AND_DATA,
+			PathRegexp: "/foobar",
+		}, &opb.File{
+			Metadata: &mpb.FileMetadata{
+				Path: "/foobar",
+			},
+		},
+		nil,
+		false,
+	},
 }
 
 func TestIsMatching(t *testing.T) {
@@ -116,13 +156,13 @@ func TestIsMatching(t *testing.T) {
 				if err == nil {
 					t.Errorf("Wanted error, got nothing")
 				}
-			} else {
-				if err != nil {
-					t.Errorf("Wanted no error, got: %v", err)
-				}
-				if res != tt.r {
-					t.Errorf("Wanted %t, got %t", tt.r, res)
-				}
+				return
+			}
+			if err != nil {
+				t.Errorf("Wanted no error, got: %v", err)
+			}
+			if res != tt.r {
+				t.Errorf("Wanted %t, got %t", tt.r, res)
 			}
 		})
 	}

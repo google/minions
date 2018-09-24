@@ -63,7 +63,7 @@ var isMatchingV = []struct {
 		"empty_interest_file",
 		&mpb.Interest{},
 		&opb.File{},
-		errors.New(""),
+		ErrNoMetadata,
 		false,
 	},
 	{
@@ -73,7 +73,7 @@ var isMatchingV = []struct {
 			PathRegexp: "/",
 		},
 		&opb.File{},
-		errors.New(""),
+		ErrNoMetadata,
 		false,
 	},
 	{

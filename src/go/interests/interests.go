@@ -14,12 +14,15 @@
 package interests
 
 import (
-	"fmt"
+	"errors"
 	"regexp"
 
 	mpb "github.com/google/minions/proto/minions"
 	opb "github.com/google/minions/proto/overlord"
 )
+
+// ErrNoMetadata is thrown when IsMatching is invoked without a
+var ErrNoMetadata = errors.New("cannot match file without metadata")
 
 // Minify returns a slice of Interest that matches the same set of files
 // as the original slice, but possibly using less Interests. For now
@@ -51,10 +54,11 @@ func Minify(interests []*mpb.Interest) []*mpb.Interest {
 }
 
 // IsMatching checks if the File is matching the Interest.
-// Error is returned where the PathRegexp in the Interest is malformed.
+// An error is returned where the PathRegexp in the Interest is malformed.
+// ErrNoMetadata is returned if the file does not have a metadata proto definition.
 func IsMatching(interest *mpb.Interest, file *opb.File) (bool, error) {
 	if file.GetMetadata() == nil {
-		return false, fmt.Errorf("cannot match file without metadata")
+		return false, ErrNoMetadata
 	}
 	// If the path doesn't match or the matching returns an error.
 	if match, err := regexp.MatchString(interest.PathRegexp, file.GetMetadata().Path); err != nil || !match {

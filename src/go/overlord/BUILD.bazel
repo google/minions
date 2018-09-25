@@ -7,7 +7,7 @@ go_library(
     visibility = ["//:__subpackages__"],
     deps = [
         "//go/grpcutil:go_default_library",
-        "//go/overlord/interests:go_default_library",
+        "//go/interests:go_default_library",
         "//go/overlord/state:go_default_library",
         "//proto/minions:go_default_library",
         "//proto/overlord:go_default_library",
